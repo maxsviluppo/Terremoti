@@ -1,3 +1,4 @@
+
 export interface EarthquakeProperties {
   mag: number;
   place: string;
@@ -52,4 +53,4 @@ export interface EarthquakeCollection {
   features: EarthquakeFeature[];
 }
 
-export type TimeGroup = 'Oggi' | 'Ieri' | 'Passato';
+export type TimeGroup = string;

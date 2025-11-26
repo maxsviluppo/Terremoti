@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchEarthquakes } from './services/ingvService';
-import { EarthquakeFeature, TimeGroup } from './types';
+import { EarthquakeFeature } from './types';
 import EarthquakeCard from './components/EarthquakeCard';
 import ChartSection from './components/ChartSection';
 import MapViewer from './components/MapViewer';
@@ -40,13 +41,9 @@ function App() {
     );
   }, [data, filterText]);
 
-  // Grouping Logic (Today, Yesterday, Older)
+  // Grouping Logic (Today, Yesterday, Specific Date)
   const groupedData = useMemo(() => {
-    const groups: Record<TimeGroup, EarthquakeFeature[]> = {
-      'Oggi': [],
-      'Ieri': [],
-      'Passato': []
-    };
+    const groups: Record<string, EarthquakeFeature[]> = {};
 
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -54,22 +51,47 @@ function App() {
 
     filteredData.forEach(item => {
       const time = item.properties.time;
+      let key: string;
+
       if (time >= todayStart) {
-        groups['Oggi'].push(item);
+        key = 'Oggi';
       } else if (time >= yesterdayStart) {
-        groups['Ieri'].push(item);
+        key = 'Ieri';
       } else {
-        groups['Passato'].push(item);
+        const dateObj = new Date(time);
+        // E.g., "Lunedì 12 Ottobre"
+        const dateStr = dateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+        key = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
       }
+
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
     });
 
     // Sort descending by time within groups
     Object.keys(groups).forEach(key => {
-      groups[key as TimeGroup].sort((a, b) => b.properties.time - a.properties.time);
+      groups[key].sort((a, b) => b.properties.time - a.properties.time);
     });
 
     return groups;
   }, [filteredData]);
+
+  // Sort keys to ensure proper order (Oggi, Ieri, then by date descending)
+  const sortedGroupKeys = useMemo(() => {
+    return Object.keys(groupedData).sort((a, b) => {
+      if (a === 'Oggi') return -1;
+      if (b === 'Oggi') return 1;
+      if (a === 'Ieri') return -1;
+      if (b === 'Ieri') return 1;
+      
+      // Compare using the time of the first event in the group
+      const timeA = groupedData[a][0]?.properties.time || 0;
+      const timeB = groupedData[b][0]?.properties.time || 0;
+      return timeB - timeA;
+    });
+  }, [groupedData]);
 
   // Handler for opening map with specific event
   const handleCardClick = (event: EarthquakeFeature) => {
@@ -157,7 +179,7 @@ function App() {
             </div>
         ) : (
             <div className="space-y-8">
-                {(['Oggi', 'Ieri', 'Passato'] as TimeGroup[]).map(groupKey => {
+                {sortedGroupKeys.map(groupKey => {
                     const items = groupedData[groupKey];
                     if (items.length === 0) return null;
 
