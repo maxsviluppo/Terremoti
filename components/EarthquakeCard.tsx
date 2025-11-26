@@ -1,14 +1,30 @@
+
 import React from 'react';
 import { EarthquakeFeature } from '../types';
 
 interface Props {
   data: EarthquakeFeature;
   onClick: (data: EarthquakeFeature) => void;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
-const EarthquakeCard: React.FC<Props> = ({ data, onClick }) => {
+// Calculate distance util (simplified version for display)
+const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; 
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const EarthquakeCard: React.FC<Props> = ({ data, onClick, userLocation }) => {
   const { mag, place, time, type } = data.properties;
   const depth = data.geometry.coordinates[2];
+  const [lng, lat] = data.geometry.coordinates;
 
   // Helper for color coding magnitude
   const getMagColor = (m: number) => {
@@ -35,9 +51,12 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick }) => {
   };
 
   const cleanPlace = (p: string) => {
-    // Remove "1 km S" or similar prefixes commonly found in INGV data
     return p.replace(/^\d+\s?km\s[A-Z]+\s/, '');
   };
+
+  const distanceFromUser = userLocation 
+    ? getDistanceKm(userLocation.lat, userLocation.lng, lat, lng).toFixed(1) 
+    : null;
 
   return (
     <div 
@@ -48,13 +67,26 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick }) => {
         <h4 className="font-bold text-emerald-700 text-lg md:text-xl truncate group-hover:text-emerald-500 transition-colors">
             {cleanPlace(place)}
         </h4>
-        <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 font-medium">
-             <span className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-500 font-medium">
+             <span className="flex items-center gap-1" title="Profondità">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                {depth.toFixed(0)} km
+                {depth.toFixed(0)} km prof.
              </span>
-             <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-             <span>{type === 'earthquake' ? 'Terremoto' : type}</span>
+             {distanceFromUser && (
+               <>
+                 <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                 <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                    A {distanceFromUser} km da te
+                 </span>
+               </>
+             )}
+             {!distanceFromUser && (
+                <>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                    <span>{type === 'earthquake' ? 'Terremoto' : type}</span>
+                </>
+             )}
         </div>
       </div>
 
