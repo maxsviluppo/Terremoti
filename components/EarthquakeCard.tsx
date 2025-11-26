@@ -82,7 +82,7 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
                 setAnimOffset(0); // Slide back
             }, 600);
         }
-    }, 15000); // Every 15 seconds
+    }, 5000); // Every 5 seconds
 
     return () => clearInterval(interval);
   }, [isFirst, isDragging]);
