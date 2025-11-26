@@ -35,34 +35,38 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) 
       }
     });
 
+    // Helper for depth color
+    const getDepthColor = (d: number) => {
+        if (d <= 5) return '#EF4444'; // Red - Molto superficiale (0-5km)
+        if (d <= 20) return '#F97316'; // Orange - Superficiale (5-20km)
+        if (d <= 50) return '#FACC15'; // Yellow - Intermedio (20-50km)
+        return '#10B981'; // Green - Profondo (>50km)
+    };
+
     // Add context markers (all recent events)
     allFeatures.forEach(evt => {
         const [lng, lat, depth] = evt.geometry.coordinates;
         const mag = evt.properties.mag;
         
-        const getColor = (m: number) => {
-            if (m < 2) return '#4ADE80'; // Green
-            if (m < 3) return '#FACC15'; // Yellow
-            if (m < 4) return '#FB923C'; // Orange
-            return '#EF4444'; // Red
-        };
-
         const circle = L.circleMarker([lat, lng], {
-            radius: Math.max(4, mag * 3),
-            fillColor: getColor(mag),
+            radius: Math.max(4, mag * 3), // Magnitude affects size
+            fillColor: getDepthColor(depth), // Depth affects color
             color: '#000',
             weight: 0.5,
             opacity: 1,
-            fillOpacity: 0.6
+            fillOpacity: 0.7
         }).addTo(map);
 
         circle.bindPopup(`
             <div style="font-family: Montserrat; text-align: center; color: #333;">
                 <strong style="font-size: 14px;">${evt.properties.place}</strong><br/>
-                <div style="margin-top: 4px; font-size: 12px;">
-                    Mag: <strong>${mag.toFixed(1)}</strong>
-                    <span style="margin: 0 4px; color: #ccc;">|</span>
-                    Profondità: <strong>${depth.toFixed(1)} km</strong>
+                <div style="margin-top: 4px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <span>Mag: <strong>${mag.toFixed(1)}</strong></span>
+                    <span style="color: #ccc;">|</span>
+                    <span style="display: flex; align-items: center; gap: 3px;">
+                        Prof: <strong>${depth.toFixed(1)} km</strong>
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${getDepthColor(depth)}; border: 1px solid rgba(0,0,0,0.1);"></span>
+                    </span>
                 </div>
             </div>
         `);
@@ -85,10 +89,12 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) 
       marker.bindPopup(`
         <div style="font-family: Montserrat; text-align: center; color: #333;">
             <strong style="font-size: 14px;">${feature.properties.place}</strong><br/>
-            <div style="margin-top: 4px; font-size: 12px;">
-                Mag: <strong>${feature.properties.mag.toFixed(1)}</strong>
-                <span style="margin: 0 4px; color: #ccc;">|</span>
-                Profondità: <strong>${depth.toFixed(1)} km</strong>
+            <div style="margin-top: 4px; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                <span>Magnitudo: <strong>${feature.properties.mag.toFixed(1)}</strong></span>
+                <span style="display: flex; align-items: center; gap: 4px;">
+                    Profondità: <strong>${depth.toFixed(1)} km</strong>
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${getDepthColor(depth)}; border: 1px solid rgba(0,0,0,0.2);"></span>
+                </span>
             </div>
         </div>
       `).openPopup();
@@ -119,6 +125,29 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) 
         </div>
         <div className="flex-1 relative">
             <div ref={mapContainerRef} className="w-full h-full" />
+            
+            {/* Legend Overlay */}
+            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-slate-200 z-[1000] text-xs pointer-events-none">
+                <p className="font-bold mb-2 text-slate-700">Profondità (km)</p>
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-red-500 border border-black/10"></span>
+                        <span>&lt; 5 (Molto Sup.)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-orange-500 border border-black/10"></span>
+                        <span>5 - 20 (Sup.)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-yellow-400 border border-black/10"></span>
+                        <span>20 - 50 (Medio)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-emerald-500 border border-black/10"></span>
+                        <span>&gt; 50 (Profondo)</span>
+                    </div>
+                </div>
+            </div>
         </div>
       </div>
     </div>
