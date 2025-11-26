@@ -47,7 +47,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
           
           <p className="text-slate-600 leading-relaxed text-sm">
             Questa App è realizzata da DevTools by Castro Massimo. 
-            <br/>Se hai bisogno di WebApp personalizzate contattaci.
+            <br/>Se hai bisogno di supporto, segnalazioni o di WebApp personalizzate contattaci.
           </p>
 
           <a 

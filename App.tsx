@@ -328,7 +328,7 @@ function App() {
   let isGlobalFirstItem = true;
 
   return (
-    <div className="min-h-screen bg-white text-slate-800 pb-10">
+    <div className="min-h-screen bg-green-50 text-slate-800 pb-10">
       
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm border-b border-green-100 transition-all">
         <div className="max-w-3xl mx-auto px-4 py-4">
