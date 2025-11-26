@@ -85,6 +85,15 @@ function App() {
     );
   };
 
+  const toggleFilter = (text: string) => {
+    if (filterText === text) {
+        setFilterText(''); // Deactivate
+    } else {
+        setFilterText(text); // Activate
+        setUserLocation(null); // Disable geo if specific filter is used
+    }
+  };
+
   // Filter Logic
   const filteredData = useMemo(() => {
     let result = data;
@@ -243,15 +252,17 @@ function App() {
              ) : (
                 <>
                     <button 
-                        onClick={() => setFilterText('Napoli')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${filterText === 'Napoli' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200' : 'bg-white text-emerald-700 border-green-100 hover:bg-green-50'}`}
+                        onClick={() => toggleFilter('Napoli')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 ${filterText === 'Napoli' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200' : 'bg-white text-emerald-700 border-green-100 hover:bg-green-50'}`}
                     >
+                         {filterText === 'Napoli' && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         Napoli
                     </button>
                     <button 
-                        onClick={() => setFilterText('Campi Flegrei')}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${filterText === 'Campi Flegrei' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200' : 'bg-white text-emerald-700 border-green-100 hover:bg-green-50'}`}
+                        onClick={() => toggleFilter('Campi Flegrei')}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 ${filterText === 'Campi Flegrei' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200' : 'bg-white text-emerald-700 border-green-100 hover:bg-green-50'}`}
                     >
+                        {filterText === 'Campi Flegrei' && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         Campi Flegrei
                     </button>
                 </>
