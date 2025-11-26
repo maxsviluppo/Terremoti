@@ -6,6 +6,7 @@ import EarthquakeCard from './components/EarthquakeCard';
 import ChartSection from './components/ChartSection';
 import MapViewer from './components/MapViewer';
 import SettingsModal, { NotificationMode } from './components/SettingsModal';
+import InfoModal from './components/InfoModal';
 
 // Haversine formula to calculate distance between two points in km
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -58,6 +59,7 @@ function App() {
   const [filterText, setFilterText] = useState<string>('');
   const [showChart, setShowChart] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showInfo, setShowInfo] = useState<boolean>(false);
   const [selectedEarthquake, setSelectedEarthquake] = useState<EarthquakeFeature | null>(null);
   const [isMapOpen, setIsMapOpen] = useState<boolean>(false);
   
@@ -351,6 +353,13 @@ function App() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 <span className="hidden md:inline text-xs font-bold">GRAFICO</span>
                 </button>
+                <button 
+                onClick={() => setShowInfo(true)}
+                className="bg-gradient-to-br from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white p-2.5 rounded-xl shadow-lg shadow-slate-300 transition-all active:scale-95 flex items-center gap-1.5"
+                title="Informazioni"
+                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                </button>
             </div>
           </div>
 
@@ -529,6 +538,13 @@ function App() {
             onRequestLocation={triggerGeolocation}
             isLocating={isLocating}
             geoError={geoError}
+        />
+      )}
+
+      {showInfo && (
+        <InfoModal 
+            isOpen={showInfo}
+            onClose={() => setShowInfo(false)}
         />
       )}
 
