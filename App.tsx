@@ -338,13 +338,16 @@ function App() {
                 <p className="text-xs text-emerald-600 font-medium">MONITORAGGIO LIVE ITALIA</p>
             </div>
             <div className="flex gap-2">
+                {/* Notification Button: Pale Rose/Pink */}
                 <button 
                 onClick={() => setShowSettings(true)}
-                className={`p-2.5 rounded-xl shadow-lg transition-all active:scale-95 border border-transparent ${notificationsEnabled ? 'bg-emerald-600 text-white shadow-emerald-200 animate-pulse' : 'bg-white text-slate-500 hover:text-emerald-600 border-slate-100'}`}
+                className={`p-2.5 rounded-xl shadow-lg transition-all active:scale-95 border border-transparent ${notificationsEnabled ? 'bg-rose-500 text-white shadow-rose-200 animate-pulse' : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100'}`}
                 title="Impostazioni Notifiche"
                 >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={notificationsEnabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                 </button>
+                
+                {/* Chart Button: Blue (Kept as primary) */}
                 <button 
                 onClick={() => setShowChart(true)}
                 className="bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2.5 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-1.5"
@@ -353,9 +356,11 @@ function App() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 <span className="hidden md:inline text-xs font-bold">GRAFICO</span>
                 </button>
+                
+                {/* Info/Email Button: Pale Green */}
                 <button 
                 onClick={() => setShowInfo(true)}
-                className="bg-gradient-to-br from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white p-2.5 rounded-xl shadow-lg shadow-slate-300 transition-all active:scale-95 flex items-center gap-1.5"
+                className="bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 p-2.5 rounded-xl shadow-lg shadow-emerald-100 transition-all active:scale-95 flex items-center gap-1.5"
                 title="Informazioni"
                 >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
@@ -390,10 +395,11 @@ function App() {
                  )}
             </div>
             
+            {/* Geolocation Button: Pale Straw Yellow */}
             <button 
                 onClick={handleGeolocation}
                 disabled={isLocating}
-                className={`p-3 rounded-xl transition-all border shadow-sm ${userLocation ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent shadow-orange-200' : 'bg-white text-emerald-600 border-green-100 hover:bg-green-50'}`}
+                className={`p-3 rounded-xl transition-all border shadow-sm ${userLocation ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent shadow-orange-200' : 'bg-yellow-50 text-yellow-600 border-yellow-100 hover:bg-yellow-100'}`}
                 title="Usa la mia posizione"
             >
                 {isLocating ? (
