@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchEarthquakes } from './services/ingvService';
 import { EarthquakeFeature } from './types';
@@ -17,6 +18,38 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
     Math.sin(dLon / 2) * Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // Distance in km
+};
+
+// Synth Alarm Sound Generator
+const playAlarmSound = () => {
+  try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'triangle';
+      const now = ctx.currentTime;
+      
+      // Siren effect (High - Low)
+      osc.frequency.setValueAtTime(880, now); // A5
+      osc.frequency.linearRampToValueAtTime(440, now + 0.3); // A4
+      osc.frequency.setValueAtTime(880, now + 0.3); // A5
+      osc.frequency.linearRampToValueAtTime(440, now + 0.6); // A4
+      
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+      osc.start(now);
+      osc.stop(now + 0.8);
+  } catch (e) {
+      console.error("Audio alarm failed", e);
+  }
 };
 
 function App() {
@@ -59,6 +92,8 @@ function App() {
     // Filter events that happened AFTER the last successful fetch
     const newEvents = features.filter(f => f.properties.time > lastFetchTimeRef.current);
 
+    let triggered = false;
+
     newEvents.forEach(event => {
       const mag = event.properties.mag;
       const place = event.properties.place.toLowerCase();
@@ -85,12 +120,17 @@ function App() {
 
       // Fire Notification
       if (shouldNotify && Notification.permission === "granted") {
+        triggered = true;
         new Notification(`Terremoto: ${event.properties.place}`, {
           body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
           icon: "/vite.svg" 
         });
       }
     });
+
+    if (triggered) {
+        playAlarmSound();
+    }
   };
 
   const loadData = async () => {
@@ -271,17 +311,18 @@ function App() {
             <div className="flex gap-2">
                 <button 
                 onClick={() => setShowSettings(true)}
-                className={`p-2.5 rounded-xl shadow-lg transition-all active:scale-95 ${notificationsEnabled ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-white text-emerald-600 border border-green-100'}`}
+                className={`p-2.5 rounded-xl shadow-lg transition-all active:scale-95 border border-transparent ${notificationsEnabled ? 'bg-emerald-600 text-white shadow-emerald-200 animate-pulse' : 'bg-white text-slate-500 hover:text-emerald-600 border-slate-100'}`}
                 title="Impostazioni Notifiche"
                 >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={notificationsEnabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                 </button>
                 <button 
                 onClick={() => setShowChart(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 rounded-xl shadow-lg shadow-emerald-200 transition-all active:scale-95"
+                className="bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2.5 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-1.5"
                 title="Statistiche"
                 >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                <span className="hidden md:inline text-xs font-bold">GRAFICO</span>
                 </button>
             </div>
           </div>
@@ -316,7 +357,7 @@ function App() {
             <button 
                 onClick={handleGeolocation}
                 disabled={isLocating}
-                className={`p-3 rounded-xl transition-all border shadow-sm ${userLocation ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-200' : 'bg-white text-emerald-600 border-green-100 hover:bg-green-50'}`}
+                className={`p-3 rounded-xl transition-all border shadow-sm ${userLocation ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent shadow-orange-200' : 'bg-white text-emerald-600 border-green-100 hover:bg-green-50'}`}
                 title="Usa la mia posizione"
             >
                 {isLocating ? (
@@ -336,16 +377,33 @@ function App() {
                  </div>
              ) : (
                 <>
+                    {filterText && (
+                        <button 
+                            onClick={() => setFilterText('')}
+                            className="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 bg-gradient-to-br from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white border-transparent shadow-red-200"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            RESET
+                        </button>
+                    )}
                     <button 
                         onClick={() => toggleFilter('Napoli')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 ${filterText === 'Napoli' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200' : 'bg-white text-emerald-700 border-green-100 hover:bg-green-50'}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 ${
+                            filterText === 'Napoli' 
+                            ? 'bg-gradient-to-br from-sky-500 to-cyan-600 text-white border-transparent shadow-sky-200 scale-105 ring-2 ring-sky-300' 
+                            : 'bg-white text-sky-700 border-sky-100 hover:bg-sky-50'
+                        }`}
                     >
                          {filterText === 'Napoli' && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         Napoli
                     </button>
                     <button 
                         onClick={() => toggleFilter('Campi Flegrei')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 ${filterText === 'Campi Flegrei' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200' : 'bg-white text-emerald-700 border-green-100 hover:bg-green-50'}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 ${
+                            filterText === 'Campi Flegrei' 
+                            ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white border-transparent shadow-emerald-200 scale-105 ring-2 ring-emerald-300' 
+                            : 'bg-white text-emerald-700 border-emerald-100 hover:bg-green-50'
+                        }`}
                     >
                         {filterText === 'Campi Flegrei' && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         Campi Flegrei

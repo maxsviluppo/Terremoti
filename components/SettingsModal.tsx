@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export type NotificationMode = 'global' | 'gps' | 'city';
@@ -22,6 +23,36 @@ interface SettingsModalProps {
   isLocating?: boolean;
   geoError?: string | null;
 }
+
+// Simple synth alarm for testing and alerting
+const playTestAlarm = () => {
+    try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContext) return;
+        
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.type = 'sine';
+        const now = ctx.currentTime;
+        
+        // "Ding" effect
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.1);
+        
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+        osc.start(now);
+        osc.stop(now + 0.5);
+    } catch (e) {
+        console.error("Audio play failed", e);
+    }
+};
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -59,6 +90,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     // Verifica lo stato corrente dei permessi
     if (Notification.permission === "granted") {
       setNotificationsEnabled(true);
+      playTestAlarm();
       return;
     }
 
@@ -72,10 +104,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         setNotificationsEnabled(true);
+        playTestAlarm();
         // Test notification
         try {
           new Notification("Notifiche attivate", {
-            body: "Riceverai avvisi per i nuovi terremoti.",
+            body: "Riceverai avvisi sonori per i nuovi terremoti.",
             icon: "/vite.svg"
           });
         } catch (e) {
@@ -114,13 +147,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-slate-800">Abilita Notifiche</p>
-              <p className="text-xs text-slate-500">Ricevi avvisi anche se la scheda è in background</p>
+              <p className="text-xs text-slate-500">Ricevi avvisi e suoni anche in background</p>
             </div>
             <button 
               onClick={handleToggleNotifications}
-              className={`w-12 h-6 rounded-full transition-colors relative ${notificationsEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+              className={`w-14 h-7 rounded-full transition-all relative outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-400 ${
+                  notificationsEnabled 
+                  ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.6)]' 
+                  : 'bg-slate-300'
+              }`}
             >
-              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${notificationsEnabled ? 'left-7' : 'left-1'}`}></div>
+              <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all shadow-sm flex items-center justify-center ${
+                  notificationsEnabled 
+                  ? 'left-8 scale-110' 
+                  : 'left-1'
+              }`}>
+                  {notificationsEnabled && (
+                      <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-20"></span>
+                  )}
+              </span>
             </button>
           </div>
 
