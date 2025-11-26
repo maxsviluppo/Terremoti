@@ -185,13 +185,13 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
           <h4 className={`font-bold text-lg md:text-xl truncate transition-colors ${isFiltered ? 'text-emerald-500' : 'text-emerald-700'}`}>
               {placeName}
           </h4>
           
           {/* Info Rows */}
-          <div className="flex flex-col gap-1 mt-1">
+          <div className="flex flex-col gap-1 mt-1.5">
             {/* Row 1: Depth, Type, Distance */}
             <div className="flex flex-wrap items-center gap-x-3 text-xs text-slate-500 font-medium">
                 <span className="flex items-center gap-1" title="Profondità">
@@ -203,7 +203,7 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
                     <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                     <span className="flex items-center gap-1 text-emerald-600 font-bold">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-                        A {distanceFromUser} km da te
+                        A {distanceFromUser} km
                     </span>
                     </>
                 )}
@@ -214,16 +214,23 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
                     </>
                 )}
             </div>
+
+            {/* Row 2: Time (Moved from right side) */}
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <span className="flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    {formatTime(time)}
+                </span>
+                <span className="text-slate-300">•</span>
+                <span>{getRelativeTime(time)}</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-1">
-          <div className={`flex items-center justify-center w-12 h-12 rounded-lg border-2 ${getMagColor(mag)}`}>
-              <span className="text-xl font-bold tracking-tighter">{mag.toFixed(1)}</span>
-          </div>
-          <div className="text-right">
-              <div className="text-xs font-bold text-slate-700">{formatTime(time)}</div>
-              <div className="text-[10px] text-slate-400">{getRelativeTime(time)}</div>
+        {/* Right Side - Bigger Magnitude Box */}
+        <div className="pl-2">
+          <div className={`flex items-center justify-center w-16 h-16 rounded-2xl border-2 ${getMagColor(mag)} shadow-sm`}>
+              <span className="text-2xl font-black tracking-tighter">{mag.toFixed(1)}</span>
           </div>
         </div>
       </div>
