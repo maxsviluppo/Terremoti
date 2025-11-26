@@ -168,20 +168,27 @@ function App() {
   const handleShare = async (data: EarthquakeFeature) => {
     const shareData = {
         title: `Terremoto: ${data.properties.place}`,
-        text: `Scossa sismica a ${data.properties.place}\nMagnitudo: ${data.properties.mag.toFixed(1)}\nProfondità: ${data.geometry.coordinates[2]}km\nOrario: ${new Date(data.properties.time).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'})}`,
+        text: `🔴 Scossa sismica rilevata\n📍 ${data.properties.place}\n📉 Magnitudo: ${data.properties.mag.toFixed(1)}\n🌍 Profondità: ${data.geometry.coordinates[2]} km\n🕒 Orario: ${new Date(data.properties.time).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'})}\n\nMonitoraggio live su:`,
         url: window.location.href
     };
 
     try {
-        if (navigator.share) {
+        // Verifica se il browser supporta la condivisione e se i dati sono validi
+        if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
             await navigator.share(shareData);
         } else {
-            // Fallback for desktop/unsupported
-            await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-            alert("Dettagli copiati negli appunti!");
+            throw new Error("API Share non supportata o dati non validi");
         }
     } catch (err) {
-        console.log("Condivisione annullata o fallita");
+        // Fallback: Copia negli appunti
+        try {
+            const textToCopy = `${shareData.text} ${shareData.url}`;
+            await navigator.clipboard.writeText(textToCopy);
+            alert("Condivisione nativa non disponibile. I dettagli sono stati copiati negli appunti!");
+        } catch (clipboardErr) {
+            console.error("Fallita anche la copia negli appunti", clipboardErr);
+            alert("Impossibile condividere. Il browser potrebbe non supportare questa funzione.");
+        }
     }
   };
 
