@@ -30,8 +30,20 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
           </div>
           
-          <h4 className="text-xl font-bold text-slate-800">DevTools</h4>
-          <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">by Castro Massimo</p>
+          {/* Disclaimer Box */}
+          <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-xs text-orange-800 text-left leading-relaxed shadow-sm">
+            <p className="mb-2">
+                <strong>Nota:</strong> Le notifiche degli eventi sismici vengono visualizzati dopo qualche minuto a secondo gli aggiornamenti di INGV (Fonte dati).
+            </p>
+            <p>
+                L'App funziona meglio se si aggiunge alla Home mediante il comando di condivisione link.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <h4 className="text-xl font-bold text-slate-800">DevTools</h4>
+            <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">by Castro Massimo</p>
+          </div>
           
           <p className="text-slate-600 leading-relaxed text-sm">
             Questa App è realizzata da DevTools by Castro Massimo. 
@@ -40,7 +52,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
 
           <a 
             href="mailto:castromassimo@gmail.com?subject=Richiesta%20Info%20WebApp"
-            className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-transform active:scale-95 shadow-lg shadow-emerald-200 mt-4"
+            className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-transform active:scale-95 shadow-lg shadow-emerald-200 mt-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
             Contattaci via Email
