@@ -94,6 +94,15 @@ function App() {
     }
   };
 
+  const handleSwipeFilter = (place: string) => {
+      if (filterText.toLowerCase() === place.toLowerCase()) {
+          setFilterText('');
+      } else {
+          setFilterText(place);
+          setUserLocation(null);
+      }
+  };
+
   // Filter Logic
   const filteredData = useMemo(() => {
     let result = data;
@@ -173,7 +182,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-green-50 text-slate-800 pb-10">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-100 text-slate-800 pb-10">
       
       {/* Header & Controls */}
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm border-b border-green-100 transition-all">
@@ -320,7 +329,9 @@ function App() {
                                         key={feature.id} 
                                         data={feature} 
                                         onClick={handleCardClick}
+                                        onFilter={handleSwipeFilter}
                                         userLocation={userLocation}
+                                        activeFilter={filterText}
                                     />
                                 ))}
                             </div>
