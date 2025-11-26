@@ -42,10 +42,10 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick }) => {
   return (
     <div 
       onClick={() => onClick(data)}
-      className="group bg-white rounded-xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer active:scale-[0.98] flex items-center justify-between gap-4"
+      className="group bg-white rounded-xl p-4 shadow-sm border border-slate-100 hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer active:scale-[0.98] flex items-center justify-between gap-4"
     >
       <div className="flex-1 min-w-0">
-        <h4 className="font-bold text-slate-800 text-sm md:text-base truncate group-hover:text-blue-600 transition-colors">
+        <h4 className="font-bold text-emerald-700 text-lg md:text-xl truncate group-hover:text-emerald-500 transition-colors">
             {cleanPlace(place)}
         </h4>
         <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 font-medium">
