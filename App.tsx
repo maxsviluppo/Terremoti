@@ -124,8 +124,32 @@ function App() {
       });
     }
 
-    return result;
+    // Ensure strict sorting by time descending for correct diff calculation
+    return result.sort((a, b) => b.properties.time - a.properties.time);
   }, [data, filterText, userLocation, searchRadius]);
+
+  // Calculate Time Diffs
+  const timeDiffMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (let i = 0; i < filteredData.length - 1; i++) {
+        const current = filteredData[i];
+        const prev = filteredData[i + 1]; // The earthquake that happened BEFORE current
+        const diffMs = current.properties.time - prev.properties.time;
+
+        const minutes = Math.floor(diffMs / 60000);
+        let diffString = "";
+        
+        if (minutes < 60) {
+            diffString = `${minutes} min`;
+        } else {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            diffString = `${hours}h ${mins}m`;
+        }
+        map.set(current.id, diffString);
+    }
+    return map;
+  }, [filteredData]);
 
   // Grouping Logic
   const groupedData = useMemo(() => {
@@ -153,11 +177,6 @@ function App() {
         groups[key] = [];
       }
       groups[key].push(item);
-    });
-
-    // Sort descending by time within groups
-    Object.keys(groups).forEach(key => {
-      groups[key].sort((a, b) => b.properties.time - a.properties.time);
     });
 
     return groups;
@@ -340,6 +359,7 @@ function App() {
                                             userLocation={userLocation}
                                             activeFilter={filterText}
                                             isFirst={isFirst}
+                                            timeSincePrevious={timeDiffMap.get(feature.id)}
                                         />
                                     );
                                 })}

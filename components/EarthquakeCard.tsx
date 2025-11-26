@@ -9,6 +9,7 @@ interface Props {
   userLocation?: { lat: number; lng: number } | null;
   activeFilter?: string;
   isFirst?: boolean;
+  timeSincePrevious?: string | null;
 }
 
 // Calculate distance util (simplified version for display)
@@ -24,7 +25,7 @@ const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) =
   return R * c;
 };
 
-const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation, activeFilter, isFirst }) => {
+const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation, activeFilter, isFirst, timeSincePrevious }) => {
   const { mag, place, time, type } = data.properties;
   const depth = data.geometry.coordinates[2];
   const [lng, lat] = data.geometry.coordinates;
@@ -155,26 +156,39 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
           <h4 className={`font-bold text-lg md:text-xl truncate transition-colors ${isFiltered ? 'text-emerald-500' : 'text-emerald-700'}`}>
               {placeName}
           </h4>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-500 font-medium">
-               <span className="flex items-center gap-1" title="Profondità">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                  {depth.toFixed(0)} km prof.
-               </span>
-               {distanceFromUser && (
-                 <>
-                   <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                   <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-                      A {distanceFromUser} km da te
-                   </span>
-                 </>
-               )}
-               {!distanceFromUser && (
-                  <>
-                      <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                      <span>{type === 'earthquake' ? 'Terremoto' : type}</span>
-                  </>
-               )}
+          
+          {/* Info Rows */}
+          <div className="flex flex-col gap-1 mt-1">
+            {/* Row 1: Depth, Type, Distance */}
+            <div className="flex flex-wrap items-center gap-x-3 text-xs text-slate-500 font-medium">
+                <span className="flex items-center gap-1" title="Profondità">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {depth.toFixed(0)} km prof.
+                </span>
+                {distanceFromUser && (
+                    <>
+                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                    <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                        A {distanceFromUser} km da te
+                    </span>
+                    </>
+                )}
+                {!distanceFromUser && (
+                    <>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                        <span>{type === 'earthquake' ? 'Terremoto' : type}</span>
+                    </>
+                )}
+            </div>
+
+            {/* Row 2: Time Difference */}
+            {timeSincePrevious && (
+                 <div className="flex items-center gap-1 text-xs text-slate-400 font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>
+                    <span>+{timeSincePrevious} dalla prec.</span>
+                 </div>
+            )}
           </div>
         </div>
 
