@@ -1,4 +1,4 @@
-import { EarthquakeCollection } from '../types';
+import { EarthquakeCollection, EarthquakeFeature } from '../types';
 
 const INGV_BASE_URL = "https://webservices.ingv.it/fdsnws/event/1/query";
 
@@ -15,8 +15,20 @@ export const fetchEarthquakes = async (days: number = 3): Promise<EarthquakeColl
     if (!response.ok) {
       throw new Error(`Error fetching data: ${response.statusText}`);
     }
-    const data: EarthquakeCollection = await response.json();
-    return data;
+    const rawData = await response.json();
+
+    // Fix: INGV returns time as ISO String, but app expects Timestamp Number.
+    // We convert it here so the rest of the app can do math on it.
+    const features = rawData.features.map((f: any): EarthquakeFeature => ({
+      ...f,
+      properties: {
+        ...f.properties,
+        // Convert ISO string to milliseconds timestamp
+        time: new Date(f.properties.time).getTime()
+      }
+    }));
+
+    return { ...rawData, features };
   } catch (error) {
     console.error("Failed to fetch earthquakes", error);
     throw error;
