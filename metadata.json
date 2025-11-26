@@ -1,0 +1,5 @@
+{
+  "name": "Seismo Italy",
+  "description": "Real-time earthquake monitoring for Italy with a focus on Campi Flegrei data analysis.",
+  "requestFramePermissions": []
+}
