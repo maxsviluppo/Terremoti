@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { EarthquakeFeature } from '../types';
 
 interface Props {
@@ -8,6 +8,7 @@ interface Props {
   onFilter: (place: string) => void;
   userLocation?: { lat: number; lng: number } | null;
   activeFilter?: string;
+  isFirst?: boolean;
 }
 
 // Calculate distance util (simplified version for display)
@@ -23,13 +24,14 @@ const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) =
   return R * c;
 };
 
-const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation, activeFilter }) => {
+const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation, activeFilter, isFirst }) => {
   const { mag, place, time, type } = data.properties;
   const depth = data.geometry.coordinates[2];
   const [lng, lat] = data.geometry.coordinates;
 
   // Swipe State
   const [offsetX, setOffsetX] = useState(0);
+  const [animOffset, setAnimOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startX = useRef<number | null>(null);
   const swipeThreshold = -80; // Distance to trigger action
@@ -69,10 +71,27 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
     ? getDistanceKm(userLocation.lat, userLocation.lng, lat, lng).toFixed(1) 
     : null;
 
+  // Hint Animation Effect
+  useEffect(() => {
+    if (!isFirst) return;
+
+    const interval = setInterval(() => {
+        if (!isDragging) {
+            setAnimOffset(-40); // Slide left
+            setTimeout(() => {
+                setAnimOffset(0); // Slide back
+            }, 600);
+        }
+    }, 15000); // Every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [isFirst, isDragging]);
+
   // Swipe Handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
     setIsDragging(false);
+    setAnimOffset(0); // Stop animation if interaction starts
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -80,7 +99,7 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
     const currentX = e.touches[0].clientX;
     const diff = currentX - startX.current;
     
-    // Only allow swipe left (negative) and limit to -120px
+    // Only allow swipe left (negative) and limit to -150px
     if (diff < 0 && diff > -150) {
         setOffsetX(diff);
         setIsDragging(true);
@@ -96,6 +115,9 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
     // Small delay to allow click event logic to know if it was a drag
     setTimeout(() => setIsDragging(false), 100);
   };
+
+  // Determine final transform value (drag takes precedence over animation)
+  const currentTransform = isDragging ? offsetX : animOffset;
 
   return (
     <div className="relative overflow-hidden rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
@@ -122,8 +144,8 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
         onClick={() => !isDragging && onClick(data)}
         className="relative bg-white p-4 cursor-pointer active:scale-[0.98] flex items-center justify-between gap-4 touch-pan-y z-10"
         style={{ 
-            transform: `translateX(${offsetX}px)`,
-            transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+            transform: `translateX(${currentTransform}px)`,
+            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' 
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

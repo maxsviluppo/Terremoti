@@ -181,6 +181,9 @@ function App() {
     setIsMapOpen(true);
   };
 
+  // Helper to track the first item for animation
+  let isGlobalFirstItem = true;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-100 text-slate-800 pb-10">
       
@@ -324,16 +327,22 @@ function App() {
                                 {groupKey}
                             </h2>
                             <div className="space-y-3">
-                                {items.map(feature => (
-                                    <EarthquakeCard 
-                                        key={feature.id} 
-                                        data={feature} 
-                                        onClick={handleCardClick}
-                                        onFilter={handleSwipeFilter}
-                                        userLocation={userLocation}
-                                        activeFilter={filterText}
-                                    />
-                                ))}
+                                {items.map((feature) => {
+                                    const isFirst = isGlobalFirstItem;
+                                    if (isFirst) isGlobalFirstItem = false;
+                                    
+                                    return (
+                                        <EarthquakeCard 
+                                            key={feature.id} 
+                                            data={feature} 
+                                            onClick={handleCardClick}
+                                            onFilter={handleSwipeFilter}
+                                            userLocation={userLocation}
+                                            activeFilter={filterText}
+                                            isFirst={isFirst}
+                                        />
+                                    );
+                                })}
                             </div>
                         </div>
                     );
