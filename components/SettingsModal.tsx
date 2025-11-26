@@ -19,6 +19,8 @@ interface SettingsModalProps {
   setNotifRadius: (km: number) => void;
   userLocation: { lat: number, lng: number } | null;
   onRequestLocation: () => void;
+  isLocating?: boolean;
+  geoError?: string | null;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -35,31 +37,58 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   notifRadius,
   setNotifRadius,
   userLocation,
-  onRequestLocation
+  onRequestLocation,
+  isLocating = false,
+  geoError = null
 }) => {
   if (!isOpen) return null;
 
-  const handleToggleNotifications = () => {
-    if (!notificationsEnabled) {
-      // Request permission
-      if (!("Notification" in window)) {
-        alert("Questo browser non supporta le notifiche desktop.");
-        return;
-      }
-      Notification.requestPermission().then((permission) => {
-        if (permission === "granted") {
-          setNotificationsEnabled(true);
+  const handleToggleNotifications = async () => {
+    // Caso 1: Stiamo disattivando
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      return;
+    }
+
+    // Caso 2: Stiamo attivando
+    if (!("Notification" in window)) {
+      alert("Questo browser non supporta le notifiche desktop.");
+      return;
+    }
+
+    // Verifica lo stato corrente dei permessi
+    if (Notification.permission === "granted") {
+      setNotificationsEnabled(true);
+      return;
+    }
+
+    if (Notification.permission === "denied") {
+      alert("Le notifiche sono state bloccate per questo sito. Per attivarle:\n\n1. Clicca sull'icona del lucchetto o delle impostazioni nella barra degli indirizzi.\n2. Cerca 'Notifiche' e seleziona 'Consenti' o 'Chiedi'.\n3. Ricarica la pagina.");
+      return;
+    }
+
+    // Se siamo qui, permission è 'default', quindi chiediamo
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setNotificationsEnabled(true);
+        // Test notification
+        try {
           new Notification("Notifiche attivate", {
             body: "Riceverai avvisi per i nuovi terremoti.",
             icon: "/vite.svg"
           });
-        } else {
-          alert("Permesso notifiche negato.");
-          setNotificationsEnabled(false);
+        } catch (e) {
+          // Ignora errori su Android/iOS dove new Notification potrebbe richiedere service worker
+          console.log("Notifica test non inviata (normale su mobile senza SW):", e);
         }
-      });
-    } else {
-      setNotificationsEnabled(false);
+      } else {
+        // L'utente ha cliccato "Blocca" o ha chiuso il prompt
+        setNotificationsEnabled(false);
+      }
+    } catch (error) {
+      console.error("Errore nella richiesta permessi:", error);
+      alert("Impossibile attivare le notifiche. Errore del browser.");
     }
   };
 
@@ -163,10 +192,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         {!userLocation ? (
                              <button 
                                 onClick={onRequestLocation}
-                                className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2"
+                                disabled={isLocating}
+                                className={`w-full py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors ${isLocating ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
-                                Attiva Posizione
+                                {isLocating ? (
+                                    <>
+                                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        Rilevamento...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                                        Attiva Posizione
+                                    </>
+                                )}
                              </button>
                         ) : (
                             <div>
@@ -188,6 +227,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     Posizione acquisita
                                 </p>
                             </div>
+                        )}
+                        {geoError && (
+                            <p className="text-xs text-red-500 bg-red-50 p-2 rounded">{geoError}</p>
                         )}
                     </div>
                 )}

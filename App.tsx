@@ -423,6 +423,8 @@ function App() {
             setNotifRadius={setNotifRadius}
             userLocation={userLocation}
             onRequestLocation={triggerGeolocation}
+            isLocating={isLocating}
+            geoError={geoError}
         />
       )}
 
