@@ -79,6 +79,33 @@ function App() {
   // Use a ref to track the last fetch time to avoid state closure issues in interval
   const lastFetchTimeRef = useRef<number>(Date.now());
 
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const storedNotif = localStorage.getItem('notificationsEnabled');
+    if (storedNotif) setNotificationsEnabled(JSON.parse(storedNotif));
+
+    const storedMag = localStorage.getItem('minAlertMag');
+    if (storedMag) setMinAlertMag(parseFloat(storedMag));
+
+    const storedMode = localStorage.getItem('notifMode');
+    if (storedMode) setNotifMode(storedMode as NotificationMode);
+
+    const storedCity = localStorage.getItem('notifCity');
+    if (storedCity) setNotifCity(storedCity);
+    
+    const storedRadius = localStorage.getItem('notifRadius');
+    if (storedRadius) setNotifRadius(parseInt(storedRadius));
+  }, []);
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
+    localStorage.setItem('minAlertMag', minAlertMag.toString());
+    localStorage.setItem('notifMode', notifMode);
+    localStorage.setItem('notifCity', notifCity);
+    localStorage.setItem('notifRadius', notifRadius.toString());
+  }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius]);
+
   // Initial Fetch & Interval
   useEffect(() => {
     loadData();
@@ -299,7 +326,7 @@ function App() {
   let isGlobalFirstItem = true;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-100 text-slate-800 pb-10">
+    <div className="min-h-screen bg-white text-slate-800 pb-10">
       
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm border-b border-green-100 transition-all">
         <div className="max-w-3xl mx-auto px-4 py-4">
@@ -377,15 +404,6 @@ function App() {
                  </div>
              ) : (
                 <>
-                    {filterText && (
-                        <button 
-                            onClick={() => setFilterText('')}
-                            className="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 bg-gradient-to-br from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white border-transparent shadow-red-200"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            RESET
-                        </button>
-                    )}
                     <button 
                         onClick={() => toggleFilter('Napoli')}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 ${
