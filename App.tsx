@@ -165,6 +165,26 @@ function App() {
       }
   };
 
+  const handleShare = async (data: EarthquakeFeature) => {
+    const shareData = {
+        title: `Terremoto: ${data.properties.place}`,
+        text: `Scossa sismica a ${data.properties.place}\nMagnitudo: ${data.properties.mag.toFixed(1)}\nProfondità: ${data.geometry.coordinates[2]}km\nOrario: ${new Date(data.properties.time).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'})}`,
+        url: window.location.href
+    };
+
+    try {
+        if (navigator.share) {
+            await navigator.share(shareData);
+        } else {
+            // Fallback for desktop/unsupported
+            await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+            alert("Dettagli copiati negli appunti!");
+        }
+    } catch (err) {
+        console.log("Condivisione annullata o fallita");
+    }
+  };
+
   const filteredData = useMemo(() => {
     let result = data;
 
@@ -378,6 +398,7 @@ function App() {
                                             data={feature} 
                                             onClick={handleCardClick}
                                             onFilter={handleSwipeFilter}
+                                            onShare={handleShare}
                                             userLocation={userLocation}
                                             activeFilter={filterText}
                                             isFirst={isFirst}

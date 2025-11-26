@@ -6,6 +6,7 @@ interface Props {
   data: EarthquakeFeature;
   onClick: (data: EarthquakeFeature) => void;
   onFilter: (place: string) => void;
+  onShare: (data: EarthquakeFeature) => void;
   userLocation?: { lat: number; lng: number } | null;
   activeFilter?: string;
   isFirst?: boolean;
@@ -24,7 +25,7 @@ const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) =
   return R * c;
 };
 
-const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation, activeFilter, isFirst }) => {
+const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, userLocation, activeFilter, isFirst }) => {
   const { mag, place, time, type } = data.properties;
   const depth = data.geometry.coordinates[2];
   const [lng, lat] = data.geometry.coordinates;
@@ -34,7 +35,9 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
   const [animOffset, setAnimOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startX = useRef<number | null>(null);
-  const swipeThreshold = -80; // Distance to trigger action
+  
+  const filterThreshold = -80; // Swipe Left Threshold
+  const shareThreshold = 80;   // Swipe Right Threshold
 
   // Helper for color coding magnitude
   const getMagColor = (m: number) => {
@@ -47,7 +50,7 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' });
   };
 
   const getRelativeTime = (timestamp: number) => {
@@ -71,15 +74,22 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
     ? getDistanceKm(userLocation.lat, userLocation.lng, lat, lng).toFixed(1) 
     : null;
 
-  // Hint Animation Effect
+  // Hint Animation Effect (Left and Right)
   useEffect(() => {
     if (!isFirst) return;
 
     const interval = setInterval(() => {
         if (!isDragging) {
+            // Sequence: Left -> Center -> Right -> Center
             setAnimOffset(-40); // Slide left
             setTimeout(() => {
                 setAnimOffset(0); // Slide back
+                setTimeout(() => {
+                    setAnimOffset(40); // Slide right
+                    setTimeout(() => {
+                        setAnimOffset(0); // Slide back
+                    }, 600);
+                }, 600);
             }, 600);
         }
     }, 5000); // Every 5 seconds
@@ -99,17 +109,23 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
     const currentX = e.touches[0].clientX;
     const diff = currentX - startX.current;
     
-    // Only allow swipe left (negative) and limit to -150px
-    if (diff < 0 && diff > -150) {
+    // Allow swipe left (-150px) and swipe right (+150px)
+    if (diff > -150 && diff < 150) {
         setOffsetX(diff);
         setIsDragging(true);
     }
   };
 
   const handleTouchEnd = () => {
-    if (offsetX < swipeThreshold) {
+    // Check Filter Threshold (Left)
+    if (offsetX < filterThreshold) {
        onFilter(placeName);
+    } 
+    // Check Share Threshold (Right)
+    else if (offsetX > shareThreshold) {
+        onShare(data);
     }
+
     setOffsetX(0);
     startX.current = null;
     // Small delay to allow click event logic to know if it was a drag
@@ -118,12 +134,19 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
 
   // Determine final transform value (drag takes precedence over animation)
   const currentTransform = isDragging ? offsetX : animOffset;
+  
+  // Determine Visual State based on direction
+  const isSwipingRight = currentTransform > 0;
+  const isSwipingLeft = currentTransform < 0;
 
   return (
     <div className="relative overflow-hidden rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
       
-      {/* Background Action Layer */}
-      <div className={`absolute inset-0 flex items-center justify-end px-6 transition-colors duration-300 ${isFiltered ? 'bg-slate-200' : 'bg-emerald-100'}`}>
+      {/* Background Action Layer - FILTER (Left Swipe) */}
+      <div 
+        className={`absolute inset-0 flex items-center justify-end px-6 transition-colors duration-300 ${isFiltered ? 'bg-slate-200' : 'bg-emerald-100'}`}
+        style={{ opacity: isSwipingLeft ? 1 : 0 }}
+      >
          <div className="flex flex-col items-center justify-center text-emerald-800 font-bold text-[10px] uppercase tracking-wider">
             {isFiltered ? (
                 <>
@@ -136,6 +159,17 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, userLocation
                     Filtra
                 </>
             )}
+         </div>
+      </div>
+
+      {/* Background Action Layer - SHARE (Right Swipe) */}
+      <div 
+        className="absolute inset-0 flex items-center justify-start px-6 transition-colors duration-300 bg-sky-100"
+        style={{ opacity: isSwipingRight ? 1 : 0 }}
+      >
+         <div className="flex flex-col items-center justify-center text-sky-800 font-bold text-[10px] uppercase tracking-wider">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+            Condividi
          </div>
       </div>
 
