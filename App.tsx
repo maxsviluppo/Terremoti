@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchEarthquakes } from './services/ingvService';
 import { EarthquakeFeature } from './types';
@@ -66,38 +67,17 @@ function App() {
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
-  // Notification States with Persistence
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('notificationsEnabled') === 'true';
-  });
-  const [minAlertMag, setMinAlertMag] = useState<number>(() => {
-    const saved = localStorage.getItem('minAlertMag');
-    return saved ? parseFloat(saved) : 2.0;
-  });
+  // Notification States
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
+  const [minAlertMag, setMinAlertMag] = useState<number>(2.0);
   
-  // New Notification Settings with Persistence
-  const [notifMode, setNotifMode] = useState<NotificationMode>(() => {
-    return (localStorage.getItem('notifMode') as NotificationMode) || 'global';
-  });
-  const [notifCity, setNotifCity] = useState<string>(() => {
-    return localStorage.getItem('notifCity') || '';
-  });
-  const [notifRadius, setNotifRadius] = useState<number>(() => {
-    const saved = localStorage.getItem('notifRadius');
-    return saved ? parseInt(saved) : 50;
-  });
+  // New Notification Settings
+  const [notifMode, setNotifMode] = useState<NotificationMode>('global');
+  const [notifCity, setNotifCity] = useState<string>('');
+  const [notifRadius, setNotifRadius] = useState<number>(50);
   
   // Use a ref to track the last fetch time to avoid state closure issues in interval
   const lastFetchTimeRef = useRef<number>(Date.now());
-
-  // Save settings on change
-  useEffect(() => {
-    localStorage.setItem('notificationsEnabled', String(notificationsEnabled));
-    localStorage.setItem('minAlertMag', String(minAlertMag));
-    localStorage.setItem('notifMode', notifMode);
-    localStorage.setItem('notifCity', notifCity);
-    localStorage.setItem('notifRadius', String(notifRadius));
-  }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius]);
 
   // Initial Fetch & Interval
   useEffect(() => {
@@ -319,9 +299,9 @@ function App() {
   let isGlobalFirstItem = true;
 
   return (
-    <div className="min-h-screen bg-white text-slate-800 pb-10">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-emerald-100 text-slate-800 pb-10">
       
-      <header className="bg-white/95 backdrop-blur-md sticky top-0 z-30 shadow-sm border-b border-green-50 transition-all">
+      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm border-b border-green-100 transition-all">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -397,6 +377,15 @@ function App() {
                  </div>
              ) : (
                 <>
+                    {filterText && (
+                        <button 
+                            onClick={() => setFilterText('')}
+                            className="px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 bg-gradient-to-br from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white border-transparent shadow-red-200"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            RESET
+                        </button>
+                    )}
                     <button 
                         onClick={() => toggleFilter('Napoli')}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 ${
@@ -436,7 +425,7 @@ function App() {
         {loading ? (
             <div className="space-y-4 animate-pulse">
                 {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-20 bg-gray-100 rounded-xl border border-gray-200"></div>
+                    <div key={i} className="h-20 bg-white rounded-xl border border-green-50"></div>
                 ))}
             </div>
         ) : filteredData.length === 0 ? (
@@ -460,7 +449,7 @@ function App() {
 
                     return (
                         <div key={groupKey}>
-                            <h2 className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3 pl-1 sticky top-[170px] bg-white/90 backdrop-blur-sm py-2 z-10">
+                            <h2 className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3 pl-1 sticky top-[170px] bg-green-50/90 backdrop-blur-sm py-2 z-10">
                                 {groupKey}
                             </h2>
                             <div className="space-y-3">
