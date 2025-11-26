@@ -341,7 +341,7 @@ function App() {
                 {/* Notification Button: Pale Rose/Pink */}
                 <button 
                 onClick={() => setShowSettings(true)}
-                className={`p-2.5 rounded-xl shadow-lg transition-all active:scale-95 border border-transparent ${notificationsEnabled ? 'bg-rose-500 text-white shadow-rose-200 animate-pulse' : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100'}`}
+                className={`p-2.5 rounded-xl transition-all active:scale-95 border border-transparent ${notificationsEnabled ? 'bg-rose-500 text-white animate-pulse' : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100'}`}
                 title="Impostazioni Notifiche"
                 >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={notificationsEnabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -350,7 +350,7 @@ function App() {
                 {/* Chart Button: Blue (Kept as primary) */}
                 <button 
                 onClick={() => setShowChart(true)}
-                className="bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2.5 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-1.5"
+                className="bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
                 title="Statistiche"
                 >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
@@ -360,7 +360,7 @@ function App() {
                 {/* Info/Email Button: Pale Green */}
                 <button 
                 onClick={() => setShowInfo(true)}
-                className="bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 p-2.5 rounded-xl shadow-lg shadow-emerald-100 transition-all active:scale-95 flex items-center gap-1.5"
+                className="bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 p-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
                 title="Informazioni"
                 >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
@@ -399,7 +399,7 @@ function App() {
             <button 
                 onClick={handleGeolocation}
                 disabled={isLocating}
-                className={`p-3 rounded-xl transition-all border shadow-sm ${userLocation ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent shadow-orange-200' : 'bg-yellow-50 text-yellow-600 border-yellow-100 hover:bg-yellow-100'}`}
+                className={`p-3 rounded-xl transition-all border ${userLocation ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent' : 'bg-yellow-50 text-yellow-600 border-yellow-100 hover:bg-yellow-100'}`}
                 title="Usa la mia posizione"
             >
                 {isLocating ? (
@@ -413,7 +413,7 @@ function App() {
           <div className="mt-3 flex gap-2 items-center overflow-x-auto no-scrollbar pb-1">
              {userLocation ? (
                  <div className="flex items-center gap-2 w-full animate-fade-in">
-                    <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white border border-emerald-600 shadow-sm shadow-emerald-200">
+                    <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white border border-emerald-600">
                         Raggio: {searchRadius} km
                     </span>
                  </div>
@@ -421,9 +421,9 @@ function App() {
                 <>
                     <button 
                         onClick={() => toggleFilter('Napoli')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 ${
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 active:scale-95 ${
                             filterText === 'Napoli' 
-                            ? 'bg-gradient-to-br from-sky-500 to-cyan-600 text-white border-transparent shadow-sky-200 scale-105 ring-2 ring-sky-300' 
+                            ? 'bg-gradient-to-br from-sky-500 to-cyan-600 text-white border-transparent scale-105 ring-2 ring-sky-300' 
                             : 'bg-white text-sky-700 border-sky-100 hover:bg-sky-50'
                         }`}
                     >
@@ -432,9 +432,9 @@ function App() {
                     </button>
                     <button 
                         onClick={() => toggleFilter('Campi Flegrei')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 shadow-lg active:scale-95 ${
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 active:scale-95 ${
                             filterText === 'Campi Flegrei' 
-                            ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white border-transparent shadow-emerald-200 scale-105 ring-2 ring-emerald-300' 
+                            ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white border-transparent scale-105 ring-2 ring-emerald-300' 
                             : 'bg-white text-emerald-700 border-emerald-100 hover:bg-green-50'
                         }`}
                     >
