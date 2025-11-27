@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export type NotificationMode = 'global' | 'gps' | 'city';
@@ -22,47 +21,12 @@ interface SettingsModalProps {
   onRequestLocation: () => void;
   isLocating?: boolean;
   geoError?: string | null;
+
+  // Audio Props
+  alarmVolume: number;
+  setAlarmVolume: (vol: number) => void;
+  onTestSound: () => void;
 }
-
-// Global context variable to unlock audio on mobile
-let unlockedAudioContext: AudioContext | null = null;
-
-const playTestAlarm = () => {
-    try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContext) return;
-        
-        // Create or resume the global context to unlock it for the whole session
-        if (!unlockedAudioContext) {
-            unlockedAudioContext = new AudioContext();
-        }
-        if (unlockedAudioContext.state === 'suspended') {
-            unlockedAudioContext.resume();
-        }
-
-        const ctx = unlockedAudioContext;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.type = 'sine';
-        const now = ctx.currentTime;
-        
-        // "Ding" effect
-        osc.frequency.setValueAtTime(880, now);
-        osc.frequency.exponentialRampToValueAtTime(440, now + 0.1);
-        
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
-
-        osc.start(now);
-        osc.stop(now + 0.5);
-    } catch (e) {
-        console.error("Audio play failed", e);
-    }
-};
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -80,7 +44,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   userLocation,
   onRequestLocation,
   isLocating = false,
-  geoError = null
+  geoError = null,
+  alarmVolume,
+  setAlarmVolume,
+  onTestSound
 }) => {
   if (!isOpen) return null;
 
@@ -91,8 +58,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       return;
     }
 
-    // Initialize/Unlock audio immediately on user gesture
-    playTestAlarm();
+    // Initialize audio via test when enabling
+    onTestSound();
 
     // Caso 2: Stiamo attivando
     if (!("Notification" in window)) {
@@ -118,7 +85,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         setNotificationsEnabled(true);
-        // Test notification
         try {
           new Notification("Notifiche attivate", {
             body: "Riceverai avvisi per i nuovi terremoti.",
@@ -128,8 +94,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           console.log("Notifica test non inviata (normale su mobile senza SW):", e);
         }
       } else {
-        // L'utente ha cliccato "Blocca" o ha chiuso il prompt
-        // Attiviamo comunque per il banner in-app
         setNotificationsEnabled(true);
         alert("Notifiche push negate, ma riceverai l'avviso visivo nell'app.");
       }
@@ -181,6 +145,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
               </span>
             </button>
+          </div>
+
+          <hr className="border-slate-100" />
+
+          {/* Volume Settings */}
+          <div className="space-y-3">
+             <div className="flex justify-between items-center">
+                 <label className="font-bold text-slate-800 text-sm">Volume Allarme</label>
+                 <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md text-xs font-bold">{(alarmVolume * 100).toFixed(0)}%</span>
+             </div>
+             <div className="flex items-center gap-3">
+                 <button onClick={onTestSound} className="p-2 bg-emerald-100 text-emerald-700 rounded-full hover:bg-emerald-200" title="Prova Suono">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                 </button>
+                 <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.1" 
+                    value={alarmVolume}
+                    onChange={(e) => setAlarmVolume(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                 />
+             </div>
+             <p className="text-[10px] text-slate-400">Clicca l'icona play per testare e sbloccare l'audio.</p>
           </div>
 
           <hr className="border-slate-100" />

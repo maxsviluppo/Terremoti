@@ -22,7 +22,8 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 // Synth Alarm Sound Generator
 let globalAudioCtx: AudioContext | null = null;
-const playAlarmSound = () => {
+
+const playAlarmSound = (volume: number) => {
   try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContext) return;
@@ -31,6 +32,7 @@ const playAlarmSound = () => {
           globalAudioCtx = new AudioContext();
       }
       
+      // Always try to resume context (crucial for browsers blocking autoplay)
       if (globalAudioCtx.state === 'suspended') {
           globalAudioCtx.resume().catch(e => console.log("Audio resume failed (no gesture)", e));
       }
@@ -42,6 +44,7 @@ const playAlarmSound = () => {
       osc.connect(gain);
       gain.connect(ctx.destination);
 
+      // Siren Effect
       osc.type = 'triangle';
       const now = ctx.currentTime;
       
@@ -50,7 +53,8 @@ const playAlarmSound = () => {
       osc.frequency.setValueAtTime(880, now + 0.3); 
       osc.frequency.linearRampToValueAtTime(440, now + 0.6); 
       
-      gain.gain.setValueAtTime(0.5, now); // Volume increased to 0.5
+      // Use dynamic volume
+      gain.gain.setValueAtTime(volume, now); 
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
 
       osc.start(now);
@@ -85,6 +89,7 @@ function App() {
   const [notifMode, setNotifMode] = useState<NotificationMode>('global');
   const [notifCity, setNotifCity] = useState<string>('');
   const [notifRadius, setNotifRadius] = useState<number>(50);
+  const [alarmVolume, setAlarmVolume] = useState<number>(0.5); // Default 50%
   
   const lastFetchTimeRef = useRef<number>(Date.now());
 
@@ -103,6 +108,9 @@ function App() {
     
     const storedRadius = localStorage.getItem('notifRadius');
     if (storedRadius) setNotifRadius(parseInt(storedRadius));
+
+    const storedVolume = localStorage.getItem('alarmVolume');
+    if (storedVolume) setAlarmVolume(parseFloat(storedVolume));
   }, []);
 
   useEffect(() => {
@@ -111,13 +119,14 @@ function App() {
     localStorage.setItem('notifMode', notifMode);
     localStorage.setItem('notifCity', notifCity);
     localStorage.setItem('notifRadius', notifRadius.toString());
-  }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius]);
+    localStorage.setItem('alarmVolume', alarmVolume.toString());
+  }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius, alarmVolume]);
 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 60000); 
     return () => clearInterval(interval);
-  }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius, userLocation]);
+  }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius, userLocation, alarmVolume]);
 
   const checkNotifications = (features: EarthquakeFeature[]) => {
     if (!notificationsEnabled) return;
@@ -164,7 +173,7 @@ function App() {
     });
 
     if (triggered) {
-        playAlarmSound();
+        playAlarmSound(alarmVolume);
         if (latestEvent) {
             setActiveAlert(latestEvent);
             setTimeout(() => setActiveAlert(null), 8000);
@@ -297,7 +306,6 @@ function App() {
             await navigator.clipboard.writeText(fullText);
             alert("Dati copiati negli appunti! Puoi incollarli dove vuoi.");
           } catch (clipboardErr) {
-             // prompt removed as requested
              console.error("Clipboard copy failed");
           }
       }
@@ -342,8 +350,7 @@ function App() {
         if (b[0] === "OGGI") return 1;
         if (a[0] === "IERI") return -1;
         if (b[0] === "IERI") return 1;
-        // Sort dates descending
-        return b[0].localeCompare(a[0]); // Simple string sort for DD/MM/YYYY works crudely or needs parsing
+        return b[0].localeCompare(a[0]);
     });
   }, [filteredData]);
 
@@ -383,12 +390,12 @@ function App() {
               onClick={() => setShowSettings(true)}
               className={`p-2 rounded-full transition-all duration-300 ${
                   notificationsEnabled 
-                  ? 'bg-yellow-400 text-white shadow-lg shadow-yellow-200' 
+                  ? 'bg-yellow-400 text-yellow-900 shadow-lg shadow-yellow-200' 
                   : 'hover:bg-emerald-200 text-emerald-800'
               }`}
               title="Impostazioni Notifiche"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={notificationsEnabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
               </svg>
@@ -542,6 +549,9 @@ function App() {
             onRequestLocation={handleGeolocation}
             isLocating={isLocating}
             geoError={geoError}
+            alarmVolume={alarmVolume}
+            setAlarmVolume={setAlarmVolume}
+            onTestSound={() => playAlarmSound(alarmVolume)}
         />
       )}
 
