@@ -46,6 +46,32 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, userLocatio
         return '#10B981'; // Green - Profondo (>50km)
     };
 
+    // Helper for popup content HTML
+    const createPopupContent = (props: any, coordinates: number[]) => {
+        const depth = coordinates[2];
+        const mag = props.mag;
+        const place = props.place;
+        
+        return `
+            <div style="font-family: 'Montserrat', sans-serif; color: #1e293b; min-width: 170px;">
+                <div style="margin-bottom: 8px; border-bottom: 2px solid #ecfdf5; padding-bottom: 6px;">
+                    <strong style="font-size: 10px; color: #059669; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Epicentro</strong>
+                    <div style="font-weight: 700; font-size: 13px; line-height: 1.3;">${place}</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div style="background: #f8fafc; padding: 6px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Magnitudo</div>
+                        <div style="font-size: 16px; font-weight: 900; color: #334155;">${mag.toFixed(1)}</div>
+                    </div>
+                    <div style="background: #f8fafc; padding: 6px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+                        <div style="font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Profondità</div>
+                        <div style="font-size: 14px; font-weight: 700; color: ${getDepthColor(depth)};">${depth.toFixed(0)} <span style="font-size: 10px; color: #94a3b8;">km</span></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
     // Add context markers (all recent events)
     allFeatures.forEach(evt => {
         const [lng, lat, depth] = evt.geometry.coordinates;
@@ -73,22 +99,12 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, userLocatio
 
         const marker = L.marker([lat, lng], { icon }).addTo(map);
 
-        // Compact Popup Content
-        marker.bindPopup(`
-            <div style="font-family: Montserrat; color: #333; min-width: 150px;">
-                <strong style="font-size: 13px; display: block; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 2px;">${evt.properties.place}</strong>
-                <div style="display: flex; gap: 8px; font-size: 12px; margin-top: 4px;">
-                    <div style="flex: 1; text-align: center; background: #f8fafc; padding: 2px; rounded: 4px;">
-                        <span style="display: block; font-size: 9px; color: #64748b; text-transform: uppercase;">Mag</span>
-                        <strong style="font-size: 14px;">${mag.toFixed(1)}</strong>
-                    </div>
-                    <div style="flex: 1; text-align: center; background: #f8fafc; padding: 2px; rounded: 4px;">
-                        <span style="display: block; font-size: 9px; color: #64748b; text-transform: uppercase;">Prof</span>
-                        <strong style="font-size: 14px; color: ${getDepthColor(depth)};">${depth.toFixed(0)}km</strong>
-                    </div>
-                </div>
-            </div>
-        `, { minWidth: 150, maxWidth: 200, closeButton: false });
+        marker.bindPopup(createPopupContent(evt.properties, evt.geometry.coordinates), { 
+            minWidth: 170, 
+            maxWidth: 240, 
+            closeButton: false,
+            autoPanPadding: [20, 20]
+        });
     });
 
     // Add User Location Marker
@@ -106,12 +122,12 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, userLocatio
         });
 
         L.marker([userLocation.lat, userLocation.lng], { icon: userIcon, zIndexOffset: 2000 }).addTo(map)
-            .bindPopup('<strong style="font-family: Montserrat; font-size: 12px;">Tu sei qui</strong>');
+            .bindPopup('<strong style="font-family: Montserrat; font-size: 12px; color: #2563eb;">La tua posizione</strong>', { closeButton: false });
     }
 
     // Add focused marker if a specific event is selected
     if (feature) {
-      const [lng, lat, depth] = feature.geometry.coordinates;
+      const [lng, lat] = feature.geometry.coordinates;
       
       const customIcon = L.icon({
         iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
@@ -123,21 +139,12 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, userLocatio
       });
 
       const marker = L.marker([lat, lng], { icon: customIcon, zIndexOffset: 3000 }).addTo(map);
-      marker.bindPopup(`
-        <div style="font-family: Montserrat; color: #333; min-width: 150px;">
-            <strong style="font-size: 13px; display: block; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 2px;">${feature.properties.place}</strong>
-            <div style="display: flex; gap: 8px; font-size: 12px; margin-top: 4px;">
-                <div style="flex: 1; text-align: center; background: #f8fafc; padding: 2px; rounded: 4px;">
-                    <span style="display: block; font-size: 9px; color: #64748b; text-transform: uppercase;">Mag</span>
-                    <strong style="font-size: 14px;">${feature.properties.mag.toFixed(1)}</strong>
-                </div>
-                <div style="flex: 1; text-align: center; background: #f8fafc; padding: 2px; rounded: 4px;">
-                    <span style="display: block; font-size: 9px; color: #64748b; text-transform: uppercase;">Prof</span>
-                    <strong style="font-size: 14px; color: ${getDepthColor(depth)};">${depth.toFixed(0)}km</strong>
-                </div>
-            </div>
-        </div>
-      `, { minWidth: 150, maxWidth: 200, closeButton: false }).openPopup();
+      marker.bindPopup(createPopupContent(feature.properties, feature.geometry.coordinates), { 
+          minWidth: 170, 
+          maxWidth: 240, 
+          closeButton: false,
+          autoPanPadding: [20, 20]
+      }).openPopup();
       
       map.setView([lat, lng], 12);
     } else if (userLocation && !allFeatures.length) {
@@ -165,7 +172,7 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, userLocatio
       <div className="bg-white rounded-2xl w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl overflow-hidden relative">
         <div className="p-4 border-b flex justify-between items-center bg-slate-50">
           <h3 className="font-bold text-lg text-slate-800">
-            {feature ? `Epicentro: ${feature.properties.place}` : 'Mappa Eventi'}
+            {feature ? `Dettaglio Evento` : 'Mappa Eventi'}
           </h3>
           <div className="flex gap-2">
             <button 
