@@ -33,7 +33,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
           {/* Disclaimer Box */}
           <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-xs text-orange-800 text-left leading-relaxed shadow-sm">
             <p className="mb-2">
-                <strong>Nota:</strong> Le notifiche degli eventi sismici vengono visualizzati dopo qualche minuto a secondo gli aggiornamenti di INGV (Fonte dati).
+                <strong>Nota:</strong> Le notifiche degli eventi sismici vengono visualizzate dopo qualche minuto in base agli aggiornamenti di INGV (Fonte dati).
             </p>
             <p>
                 L'App funziona meglio se si aggiunge alla Home mediante il comando di condivisione link.

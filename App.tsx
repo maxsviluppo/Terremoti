@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchEarthquakes } from './services/ingvService';
 import { EarthquakeFeature } from './types';
@@ -183,8 +184,11 @@ function App() {
             try {
                 new Notification(`Terremoto: ${event.properties.place}`, {
                     body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
-                    icon: "./vite.svg" 
-                });
+                    icon: "./vite.svg",
+                    vibrate: [200, 100, 200], // Vibration pattern
+                    tag: 'seismo-alert', // Avoids stacking too many notifications
+                    renotify: true // Notify again even if existing
+                } as any);
             } catch(e) { console.log(e); }
         }
       }
