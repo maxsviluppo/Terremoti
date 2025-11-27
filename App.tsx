@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchEarthquakes } from './services/ingvService';
 import { EarthquakeFeature } from './types';
@@ -182,13 +181,16 @@ function App() {
         
         if (Notification.permission === "granted") {
             try {
-                new Notification(`Terremoto: ${event.properties.place}`, {
+                // Fix: 'vibrate' is not in the standard NotificationOptions type in some TS versions.
+                // Using 'any' to bypass strict type checking for this property.
+                const nOptions: any = {
                     body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
-                    icon: "./vite.svg",
+                    icon: "vite.svg",
                     vibrate: [200, 100, 200], // Vibration pattern
                     tag: 'seismo-alert', // Avoids stacking too many notifications
                     renotify: true // Notify again even if existing
-                } as any);
+                };
+                new Notification(`Terremoto: ${event.properties.place}`, nOptions);
             } catch(e) { console.log(e); }
         }
       }
@@ -252,10 +254,11 @@ function App() {
       return;
     }
 
+    // Increased timeout and allow cached positions (maximumAge) for faster lock
     const options = {
         enableHighAccuracy: !retryLowAccuracy,
-        timeout: 15000,
-        maximumAge: 0
+        timeout: 20000, 
+        maximumAge: 30000 
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -338,8 +341,8 @@ function App() {
           const fullText = `🔴 TERREMOTO RILEVATO\n\n📍 ${place}\n📉 Magnitudo: ${mag.toFixed(1)}\n⬇️ Profondità: ${depth} km\n🕒 Orario: ${dateStr}\n\nDati INGV`;
           try {
             await navigator.clipboard.writeText(fullText);
-            // No prompt, silent fallback or simple alert
-            alert("Info copiate!");
+            // Silent copy fallback without prompt, maybe a simple non-blocking alert or nothing
+            // alert("Info copiate!"); // User requested to remove manual steps, simple alert is okay
           } catch (clipboardErr) {
              console.error("Clipboard copy failed");
           }
