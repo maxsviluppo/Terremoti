@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchEarthquakes } from './services/ingvService';
 import { EarthquakeFeature } from './types';
@@ -562,7 +561,7 @@ function App() {
       </div>
 
       {/* MODALS */}
-      {showChart && <ChartSection data={filteredData} onClose={() => setShowChart(false)} />}
+      {showChart && <ChartSection data={data} onClose={() => setShowChart(false)} />}
       
       {showSettings && (
         <SettingsModal 
