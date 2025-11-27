@@ -50,7 +50,7 @@ const playAlarmSound = () => {
       osc.frequency.setValueAtTime(880, now + 0.3); 
       osc.frequency.linearRampToValueAtTime(440, now + 0.6); 
       
-      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.setValueAtTime(0.5, now); // Volume increased to 0.5
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
 
       osc.start(now);
@@ -297,7 +297,8 @@ function App() {
             await navigator.clipboard.writeText(fullText);
             alert("Dati copiati negli appunti! Puoi incollarli dove vuoi.");
           } catch (clipboardErr) {
-             prompt("Copia i dati manualmente:", fullText);
+             // prompt removed as requested
+             console.error("Clipboard copy failed");
           }
       }
   };
@@ -380,7 +381,11 @@ function App() {
             
             <button 
               onClick={() => setShowSettings(true)}
-              className="p-2 hover:bg-emerald-200 rounded-full transition-colors text-emerald-800"
+              className={`p-2 rounded-full transition-all duration-300 ${
+                  notificationsEnabled 
+                  ? 'bg-yellow-400 text-white shadow-lg shadow-yellow-200' 
+                  : 'hover:bg-emerald-200 text-emerald-800'
+              }`}
               title="Impostazioni Notifiche"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
