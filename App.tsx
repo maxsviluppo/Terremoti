@@ -91,7 +91,9 @@ function App() {
   const [notifRadius, setNotifRadius] = useState<number>(50);
   const [alarmVolume, setAlarmVolume] = useState<number>(0.5); // Default 50%
   
-  const lastFetchTimeRef = useRef<number>(Date.now());
+  // Track the timestamp of the latest known earthquake to detect NEW ones.
+  // Initialized to null to identify first load.
+  const latestEventTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     const storedNotif = localStorage.getItem('notificationsEnabled');
@@ -111,6 +113,24 @@ function App() {
 
     const storedVolume = localStorage.getItem('alarmVolume');
     if (storedVolume) setAlarmVolume(parseFloat(storedVolume));
+    
+    // Unlock Audio Context on first user interaction
+    const unlockAudio = () => {
+        if (!globalAudioCtx) {
+             const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+             if (AudioContext) globalAudioCtx = new AudioContext();
+        }
+        if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+            globalAudioCtx.resume();
+        }
+    };
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('touchstart', unlockAudio, { once: true });
+    
+    return () => {
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+    };
   }, []);
 
   useEffect(() => {
@@ -128,10 +148,8 @@ function App() {
     return () => clearInterval(interval);
   }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius, userLocation, alarmVolume]);
 
-  const checkNotifications = (features: EarthquakeFeature[]) => {
+  const checkNotifications = (newEvents: EarthquakeFeature[]) => {
     if (!notificationsEnabled) return;
-
-    const newEvents = features.filter(f => f.properties.time > lastFetchTimeRef.current);
 
     let triggered = false;
     let latestEvent: EarthquakeFeature | null = null;
@@ -183,15 +201,27 @@ function App() {
 
   const loadData = async () => {
     try {
-      const fetchTime = Date.now();
       const result = await fetchEarthquakes(3); 
       
-      if (data.length > 0) {
-        checkNotifications(result.features);
+      // Calculate the most recent timestamp in the fetched data
+      const currentMaxTime = result.features.length > 0 
+        ? Math.max(...result.features.map(f => f.properties.time)) 
+        : 0;
+
+      if (latestEventTimeRef.current === null) {
+          // First Load: Just sync the time, don't notify for everything existing
+          latestEventTimeRef.current = currentMaxTime;
+      } else {
+          // Subsequent Loads: Check for any event strictly newer than what we saw last time
+          const newEvents = result.features.filter(f => f.properties.time > latestEventTimeRef.current!);
+          
+          if (newEvents.length > 0) {
+              checkNotifications(newEvents);
+              latestEventTimeRef.current = currentMaxTime;
+          }
       }
 
       setData(result.features);
-      lastFetchTimeRef.current = fetchTime;
 
     } catch (err) {
       console.error(err);
@@ -304,7 +334,8 @@ function App() {
           const fullText = `🔴 TERREMOTO RILEVATO\n\n📍 ${place}\n📉 Magnitudo: ${mag.toFixed(1)}\n⬇️ Profondità: ${depth} km\n🕒 Orario: ${dateStr}\n\nDati INGV`;
           try {
             await navigator.clipboard.writeText(fullText);
-            alert("Dati copiati negli appunti! Puoi incollarli dove vuoi.");
+            // No prompt, silent fallback or simple alert
+            alert("Info copiate!");
           } catch (clipboardErr) {
              console.error("Clipboard copy failed");
           }
@@ -390,15 +421,16 @@ function App() {
               onClick={() => setShowSettings(true)}
               className={`p-2 rounded-full transition-all duration-300 ${
                   notificationsEnabled 
-                  ? 'bg-yellow-400 text-yellow-900 shadow-lg shadow-yellow-200' 
+                  ? 'bg-yellow-400 text-yellow-900 shadow-lg shadow-yellow-200 ring-2 ring-yellow-100' 
                   : 'hover:bg-emerald-200 text-emerald-800'
               }`}
               title="Impostazioni Notifiche"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={notificationsEnabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-              </svg>
+              {notificationsEnabled ? (
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+              ) : (
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /><path d="M4 2C2.8 3.7 2 5.7 2 8"/><path d="M22 8c0-2.3-.8-4.3-2-6"/></svg>
+              )}
             </button>
             <button 
               onClick={() => setShowChart(true)} 
