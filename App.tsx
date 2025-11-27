@@ -371,16 +371,22 @@ function App() {
       <div className="max-w-md mx-auto px-4 py-6">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-black tracking-tight text-emerald-900">TERREMOTI</h1>
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-emerald-900 leading-none">TERREMOTI</h1>
+            <p className="text-xs font-semibold text-emerald-600/80 mt-1 tracking-wide">Terremoti in tempo reale</p>
+          </div>
           <div className="flex gap-2">
             
             <button 
               onClick={() => setShowSettings(true)}
               className="p-2 hover:bg-emerald-200 rounded-full transition-colors text-emerald-800"
-              title="Impostazioni"
+              title="Impostazioni Notifiche"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              </svg>
             </button>
             <button 
               onClick={() => setShowChart(true)} 
@@ -479,8 +485,16 @@ function App() {
         ) : (
           <div className="space-y-6">
             {groupedEvents.map(([groupName, events]) => (
-                <div key={groupName} className="animate-slide-up">
-                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 sticky top-0 bg-emerald-50 py-2 z-10">{groupName}</h2>
+                <div key={groupName} className="animate-slide-up relative pt-4">
+                    {/* Visual Separator */}
+                    <div className="flex items-center justify-center gap-3 mb-4 sticky top-0 bg-emerald-50 py-2 z-10">
+                        <div className="h-px bg-emerald-200 flex-1"></div>
+                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full shadow-sm uppercase tracking-widest border border-emerald-200">
+                            {groupName}
+                        </span>
+                        <div className="h-px bg-emerald-200 flex-1"></div>
+                    </div>
+                    
                     <div className="space-y-3">
                         {events.map((event, index) => (
                             <EarthquakeCard 
