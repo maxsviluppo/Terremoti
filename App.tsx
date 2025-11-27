@@ -182,16 +182,10 @@ function App() {
         
         if (Notification.permission === "granted") {
             try {
-                // Fix: 'vibrate' is not in the standard NotificationOptions type in some TS versions.
-                // Using 'any' to bypass strict type checking for this property.
-                const nOptions: any = {
+                new Notification(`Terremoto: ${event.properties.place}`, {
                     body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
-                    icon: "vite.svg",
-                    vibrate: [200, 100, 200], // Vibration pattern
-                    tag: 'seismo-alert', // Avoids stacking too many notifications
-                    renotify: true // Notify again even if existing
-                };
-                new Notification(`Terremoto: ${event.properties.place}`, nOptions);
+                    icon: "/vite.svg" 
+                });
             } catch(e) { console.log(e); }
         }
       }
@@ -245,7 +239,7 @@ function App() {
     triggerGeolocation();
   };
 
-  const triggerGeolocation = (forceHighAccuracy = false) => {
+  const triggerGeolocation = (retryLowAccuracy = false) => {
     setIsLocating(true);
     setGeoError(null);
 
@@ -255,12 +249,10 @@ function App() {
       return;
     }
 
-    // iOS Optimization: Start with Low Accuracy (false) as default.
-    // It's much faster and less likely to timeout or be denied on iPhones indoors.
     const options = {
-        enableHighAccuracy: forceHighAccuracy, 
-        timeout: 15000, 
-        maximumAge: 60000 
+        enableHighAccuracy: !retryLowAccuracy,
+        timeout: 15000,
+        maximumAge: 0
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -276,26 +268,23 @@ function App() {
       (error) => {
         console.error("Error getting location:", error);
         
-        // If low accuracy failed (rare), try high accuracy? 
-        // Or if high accuracy failed, we fall back.
-        // Actually, on iOS, usually if one fails, both fail unless outdoors.
-        
-        let errorMsg = "Errore posizione.";
+        // Retry with low accuracy if timeout occurs
+        if (!retryLowAccuracy && error.code === error.TIMEOUT) {
+            console.log("High accuracy timed out, retrying with low accuracy...");
+            triggerGeolocation(true);
+            return;
+        }
+
+        let errorMsg = "Errore rilevazione posizione.";
         switch(error.code) {
           case error.PERMISSION_DENIED:
-            errorMsg = "GPS Negato. Controlla Impostazioni > Privacy.";
+            errorMsg = "Permesso GPS negato.";
             break;
           case error.POSITION_UNAVAILABLE:
             errorMsg = "Posizione non disponibile.";
             break;
           case error.TIMEOUT:
-            if (!forceHighAccuracy) {
-                // If Low Accuracy timed out (very rare), maybe try High?
-                // But usually timeout means no signal.
-                errorMsg = "Segnale GPS debole. Riprova.";
-            } else {
-                errorMsg = "Timeout GPS.";
-            }
+            errorMsg = "Timeout richiesta GPS.";
             break;
         }
         setGeoError(errorMsg);
@@ -346,7 +335,8 @@ function App() {
           const fullText = `🔴 TERREMOTO RILEVATO\n\n📍 ${place}\n📉 Magnitudo: ${mag.toFixed(1)}\n⬇️ Profondità: ${depth} km\n🕒 Orario: ${dateStr}\n\nDati INGV`;
           try {
             await navigator.clipboard.writeText(fullText);
-            alert("Info copiate negli appunti!");
+            // No prompt, silent fallback or simple alert
+            alert("Info copiate!");
           } catch (clipboardErr) {
              console.error("Clipboard copy failed");
           }
