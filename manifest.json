@@ -1,0 +1,21 @@
+{
+  "name": "Seismo Italy",
+  "short_name": "Seismo IT",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ecfdf5",
+  "theme_color": "#ecfdf5",
+  "description": "Monitoraggio terremoti in tempo reale.",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
