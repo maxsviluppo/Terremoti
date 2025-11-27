@@ -1,7 +1,8 @@
+
 {
   "name": "Seismo Italy",
   "short_name": "Seismo IT",
-  "start_url": ".",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ecfdf5",
   "theme_color": "#ecfdf5",

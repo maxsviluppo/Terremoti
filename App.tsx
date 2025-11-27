@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchEarthquakes } from './services/ingvService';
 import { EarthquakeFeature } from './types';
@@ -244,7 +245,7 @@ function App() {
     triggerGeolocation();
   };
 
-  const triggerGeolocation = (retryLowAccuracy = false) => {
+  const triggerGeolocation = (forceHighAccuracy = false) => {
     setIsLocating(true);
     setGeoError(null);
 
@@ -254,11 +255,12 @@ function App() {
       return;
     }
 
-    // Increased timeout and allow cached positions (maximumAge) for faster lock
+    // iOS Optimization: Start with Low Accuracy (false) as default.
+    // It's much faster and less likely to timeout or be denied on iPhones indoors.
     const options = {
-        enableHighAccuracy: !retryLowAccuracy,
-        timeout: 20000, 
-        maximumAge: 30000 
+        enableHighAccuracy: forceHighAccuracy, 
+        timeout: 15000, 
+        maximumAge: 60000 
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -274,23 +276,26 @@ function App() {
       (error) => {
         console.error("Error getting location:", error);
         
-        // Retry with low accuracy if timeout occurs
-        if (!retryLowAccuracy && error.code === error.TIMEOUT) {
-            console.log("High accuracy timed out, retrying with low accuracy...");
-            triggerGeolocation(true);
-            return;
-        }
-
-        let errorMsg = "Errore rilevazione posizione.";
+        // If low accuracy failed (rare), try high accuracy? 
+        // Or if high accuracy failed, we fall back.
+        // Actually, on iOS, usually if one fails, both fail unless outdoors.
+        
+        let errorMsg = "Errore posizione.";
         switch(error.code) {
           case error.PERMISSION_DENIED:
-            errorMsg = "Permesso GPS negato.";
+            errorMsg = "GPS Negato. Controlla Impostazioni > Privacy.";
             break;
           case error.POSITION_UNAVAILABLE:
             errorMsg = "Posizione non disponibile.";
             break;
           case error.TIMEOUT:
-            errorMsg = "Timeout richiesta GPS.";
+            if (!forceHighAccuracy) {
+                // If Low Accuracy timed out (very rare), maybe try High?
+                // But usually timeout means no signal.
+                errorMsg = "Segnale GPS debole. Riprova.";
+            } else {
+                errorMsg = "Timeout GPS.";
+            }
             break;
         }
         setGeoError(errorMsg);
@@ -341,8 +346,7 @@ function App() {
           const fullText = `🔴 TERREMOTO RILEVATO\n\n📍 ${place}\n📉 Magnitudo: ${mag.toFixed(1)}\n⬇️ Profondità: ${depth} km\n🕒 Orario: ${dateStr}\n\nDati INGV`;
           try {
             await navigator.clipboard.writeText(fullText);
-            // Silent copy fallback without prompt, maybe a simple non-blocking alert or nothing
-            // alert("Info copiate!"); // User requested to remove manual steps, simple alert is okay
+            alert("Info copiate negli appunti!");
           } catch (clipboardErr) {
              console.error("Clipboard copy failed");
           }
