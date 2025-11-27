@@ -36,8 +36,10 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
   const [isDragging, setIsDragging] = useState(false);
   const startX = useRef<number | null>(null);
   
-  const filterThreshold = -80; // Swipe Left Threshold
-  const shareThreshold = 80;   // Swipe Right Threshold
+  // Adjusted thresholds for easier activation (Left/Right)
+  const filterThreshold = -50; // Swipe Left to Filter
+  const shareThreshold = 50;   // Swipe Right to Share
+  const maxVisualOffset = 120; // Cap visual movement
 
   // Helper for color coding magnitude
   const getMagColor = (m: number) => {
@@ -64,7 +66,6 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
   };
 
   const cleanPlace = (p: string) => {
-    // Rimuove prefissi come "2 km E" o "10 km SW" mantenendo il nome della località
     return p.replace(/^\d+\s?km\s[A-Z]+\s/, '').trim();
   };
 
@@ -81,16 +82,16 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
     const interval = setInterval(() => {
         if (!isDragging) {
             // Sequence: Left -> Center -> Right -> Center
-            setAnimOffset(-40); // Slide left
+            setAnimOffset(-25); // Slide left
             setTimeout(() => {
                 setAnimOffset(0); // Slide back
                 setTimeout(() => {
-                    setAnimOffset(40); // Slide right
+                    setAnimOffset(25); // Slide right
                     setTimeout(() => {
                         setAnimOffset(0); // Slide back
-                    }, 600);
-                }, 600);
-            }, 600);
+                    }, 500);
+                }, 500);
+            }, 500);
         }
     }, 5000); // Every 5 seconds
 
@@ -101,7 +102,7 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
     setIsDragging(false);
-    setAnimOffset(0); // Stop animation if interaction starts
+    setAnimOffset(0);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -109,53 +110,61 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
     const currentX = e.touches[0].clientX;
     const diff = currentX - startX.current;
     
-    // Allow swipe left (-150px) and swipe right (+150px)
-    if (diff > -150 && diff < 150) {
-        setOffsetX(diff);
-        setIsDragging(true);
-    }
+    setOffsetX(diff);
+    setIsDragging(true);
   };
 
   const handleTouchEnd = () => {
-    // Check Filter Threshold (Left)
-    if (offsetX < filterThreshold) {
-       onFilter(placeName);
-    } 
-    // Check Share Threshold (Right)
-    else if (offsetX > shareThreshold) {
-        onShare(data);
+    if (isDragging && startX.current !== null) {
+      // Check Filter Threshold (Left)
+      if (offsetX < filterThreshold) {
+         if (navigator.vibrate) navigator.vibrate(50);
+         onFilter(placeName);
+      } 
+      // Check Share Threshold (Right)
+      else if (offsetX > shareThreshold) {
+          if (navigator.vibrate) navigator.vibrate(50);
+          onShare(data);
+      }
     }
 
     setOffsetX(0);
     startX.current = null;
-    // Small delay to allow click event logic to know if it was a drag
-    setTimeout(() => setIsDragging(false), 100);
+    setTimeout(() => setIsDragging(false), 50);
   };
 
-  // Determine final transform value (drag takes precedence over animation)
-  const currentTransform = isDragging ? offsetX : animOffset;
+  // Determine final transform value
+  let visualX = isDragging ? offsetX : animOffset;
   
-  // Determine Visual State based on direction
-  const isSwipingRight = currentTransform > 0;
-  const isSwipingLeft = currentTransform < 0;
+  // Clamp visually
+  if (visualX > maxVisualOffset) visualX = maxVisualOffset + (visualX - maxVisualOffset) * 0.2; 
+  if (visualX < -maxVisualOffset) visualX = -maxVisualOffset + (visualX + maxVisualOffset) * 0.2; 
+  
+  // Visual States
+  const isSwipingRight = visualX > 0;
+  const isSwipingLeft = visualX < 0;
+
+  // Opacity calculation (0 to 1)
+  const leftOpacity = Math.min(Math.abs(Math.min(0, visualX)) / Math.abs(filterThreshold), 1);
+  const rightOpacity = Math.min(Math.max(0, visualX) / shareThreshold, 1);
 
   return (
-    <div className="relative overflow-hidden rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+    <div className="relative overflow-hidden rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow select-none">
       
       {/* Background Action Layer - FILTER (Left Swipe) */}
       <div 
-        className={`absolute inset-0 flex items-center justify-end px-6 transition-colors duration-300 ${isFiltered ? 'bg-slate-200' : 'bg-emerald-100'}`}
-        style={{ opacity: isSwipingLeft ? 1 : 0 }}
+        className={`absolute inset-0 flex items-center justify-end px-6 transition-colors duration-200 ${isFiltered ? 'bg-slate-200' : 'bg-emerald-100'}`}
+        style={{ opacity: isSwipingLeft ? leftOpacity : 0 }}
       >
-         <div className="flex flex-col items-center justify-center text-emerald-800 font-bold text-[10px] uppercase tracking-wider">
+         <div className="flex flex-col items-center justify-center text-emerald-800 font-bold text-[10px] uppercase tracking-wider scale-110">
             {isFiltered ? (
                 <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Reset
                 </>
             ) : (
                 <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                     Filtra
                 </>
             )}
@@ -164,11 +173,11 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
 
       {/* Background Action Layer - SHARE (Right Swipe) */}
       <div 
-        className="absolute inset-0 flex items-center justify-start px-6 transition-colors duration-300 bg-sky-100"
-        style={{ opacity: isSwipingRight ? 1 : 0 }}
+        className="absolute inset-0 flex items-center justify-start px-6 transition-colors duration-200 bg-sky-100"
+        style={{ opacity: isSwipingRight ? rightOpacity : 0 }}
       >
-         <div className="flex flex-col items-center justify-center text-sky-800 font-bold text-[10px] uppercase tracking-wider">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
+         <div className="flex flex-col items-center justify-center text-sky-800 font-bold text-[10px] uppercase tracking-wider scale-110">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>
             Condividi
          </div>
       </div>
@@ -178,8 +187,8 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
         onClick={() => !isDragging && onClick(data)}
         className="relative bg-white p-4 cursor-pointer active:scale-[0.98] flex items-center justify-between gap-4 touch-pan-y z-10"
         style={{ 
-            transform: `translateX(${currentTransform}px)`,
-            transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+            transform: `translateX(${visualX}px)`,
+            transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)' 
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -228,7 +237,7 @@ const EarthquakeCard: React.FC<Props> = ({ data, onClick, onFilter, onShare, use
         </div>
 
         {/* Right Side - Bigger Magnitude Box */}
-        <div className="pl-2">
+        <div className="pl-2 shrink-0">
           <div className={`flex items-center justify-center w-16 h-16 rounded-2xl border-2 ${getMagColor(mag)} shadow-sm`}>
               <span className="text-2xl font-black tracking-tighter">{mag.toFixed(1)}</span>
           </div>

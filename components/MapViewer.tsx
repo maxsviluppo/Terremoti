@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { EarthquakeFeature } from '../types';
@@ -5,10 +6,12 @@ import { EarthquakeFeature } from '../types';
 interface MapViewerProps {
   feature: EarthquakeFeature | null; // Single focused event
   allFeatures: EarthquakeFeature[]; // Context events
+  userLocation?: { lat: number; lng: number } | null;
+  onRequestLocation: () => void;
   onClose: () => void;
 }
 
-const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) => {
+const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, userLocation, onRequestLocation, onClose }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
@@ -48,29 +51,63 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) 
         const [lng, lat, depth] = evt.geometry.coordinates;
         const mag = evt.properties.mag;
         
-        const circle = L.circleMarker([lat, lng], {
-            radius: Math.max(4, mag * 3), // Magnitude affects size
-            fillColor: getDepthColor(depth), // Depth affects color
-            color: '#000',
-            weight: 0.5,
-            opacity: 1,
-            fillOpacity: 0.7
-        }).addTo(map);
+        // Custom divIcon for animated markers
+        const markerHtml = `
+            <div style="
+                width: ${Math.max(10, mag * 6)}px;
+                height: ${Math.max(10, mag * 6)}px;
+                background-color: ${getDepthColor(depth)};
+                border: 1px solid rgba(0,0,0,0.3);
+                border-radius: 50%;
+                opacity: 0.8;
+                box-shadow: 0 0 5px rgba(0,0,0,0.2);
+            " class="animate-marker-pop"></div>
+        `;
 
-        circle.bindPopup(`
-            <div style="font-family: Montserrat; text-align: center; color: #333;">
-                <strong style="font-size: 14px;">${evt.properties.place}</strong><br/>
-                <div style="margin-top: 4px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                    <span>Mag: <strong>${mag.toFixed(1)}</strong></span>
-                    <span style="color: #ccc;">|</span>
-                    <span style="display: flex; align-items: center; gap: 3px;">
-                        Prof: <strong>${depth.toFixed(1)} km</strong>
-                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${getDepthColor(depth)}; border: 1px solid rgba(0,0,0,0.1);"></span>
-                    </span>
+        const icon = L.divIcon({
+            html: markerHtml,
+            className: '',
+            iconSize: [Math.max(10, mag * 6), Math.max(10, mag * 6)],
+            iconAnchor: [Math.max(10, mag * 6) / 2, Math.max(10, mag * 6) / 2]
+        });
+
+        const marker = L.marker([lat, lng], { icon }).addTo(map);
+
+        // Compact Popup Content
+        marker.bindPopup(`
+            <div style="font-family: Montserrat; color: #333; min-width: 150px;">
+                <strong style="font-size: 13px; display: block; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 2px;">${evt.properties.place}</strong>
+                <div style="display: flex; gap: 8px; font-size: 12px; margin-top: 4px;">
+                    <div style="flex: 1; text-align: center; background: #f8fafc; padding: 2px; rounded: 4px;">
+                        <span style="display: block; font-size: 9px; color: #64748b; text-transform: uppercase;">Mag</span>
+                        <strong style="font-size: 14px;">${mag.toFixed(1)}</strong>
+                    </div>
+                    <div style="flex: 1; text-align: center; background: #f8fafc; padding: 2px; rounded: 4px;">
+                        <span style="display: block; font-size: 9px; color: #64748b; text-transform: uppercase;">Prof</span>
+                        <strong style="font-size: 14px; color: ${getDepthColor(depth)};">${depth.toFixed(0)}km</strong>
+                    </div>
                 </div>
             </div>
-        `);
+        `, { minWidth: 150, maxWidth: 200, closeButton: false });
     });
+
+    // Add User Location Marker
+    if (userLocation) {
+        const userIcon = L.divIcon({
+            html: `
+                <div style="position: relative; width: 20px; height: 20px;">
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #2563eb; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.4); z-index: 2;"></div>
+                    <div style="position: absolute; top: -10px; left: -10px; width: 40px; height: 40px; background-color: rgba(37, 99, 235, 0.3); border-radius: 50%; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+                </div>
+            `,
+            className: '',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        L.marker([userLocation.lat, userLocation.lng], { icon: userIcon, zIndexOffset: 2000 }).addTo(map)
+            .bindPopup('<strong style="font-family: Montserrat; font-size: 12px;">Tu sei qui</strong>');
+    }
 
     // Add focused marker if a specific event is selected
     if (feature) {
@@ -85,21 +122,27 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) 
         shadowSize: [41, 41]
       });
 
-      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+      const marker = L.marker([lat, lng], { icon: customIcon, zIndexOffset: 3000 }).addTo(map);
       marker.bindPopup(`
-        <div style="font-family: Montserrat; text-align: center; color: #333;">
-            <strong style="font-size: 14px;">${feature.properties.place}</strong><br/>
-            <div style="margin-top: 4px; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                <span>Magnitudo: <strong>${feature.properties.mag.toFixed(1)}</strong></span>
-                <span style="display: flex; align-items: center; gap: 4px;">
-                    Profondità: <strong>${depth.toFixed(1)} km</strong>
-                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${getDepthColor(depth)}; border: 1px solid rgba(0,0,0,0.2);"></span>
-                </span>
+        <div style="font-family: Montserrat; color: #333; min-width: 150px;">
+            <strong style="font-size: 13px; display: block; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 2px;">${feature.properties.place}</strong>
+            <div style="display: flex; gap: 8px; font-size: 12px; margin-top: 4px;">
+                <div style="flex: 1; text-align: center; background: #f8fafc; padding: 2px; rounded: 4px;">
+                    <span style="display: block; font-size: 9px; color: #64748b; text-transform: uppercase;">Mag</span>
+                    <strong style="font-size: 14px;">${feature.properties.mag.toFixed(1)}</strong>
+                </div>
+                <div style="flex: 1; text-align: center; background: #f8fafc; padding: 2px; rounded: 4px;">
+                    <span style="display: block; font-size: 9px; color: #64748b; text-transform: uppercase;">Prof</span>
+                    <strong style="font-size: 14px; color: ${getDepthColor(depth)};">${depth.toFixed(0)}km</strong>
+                </div>
             </div>
         </div>
-      `).openPopup();
+      `, { minWidth: 150, maxWidth: 200, closeButton: false }).openPopup();
       
       map.setView([lat, lng], 12);
+    } else if (userLocation && !allFeatures.length) {
+        // If only showing map and we have user location but no events loaded yet, center on user
+        map.setView([userLocation.lat, userLocation.lng], 10);
     }
 
     // Cleanup on unmount (optional, but good practice if component destroys)
@@ -107,7 +150,15 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) 
         map.invalidateSize();
     }, 100);
 
-  }, [feature, allFeatures]);
+  }, [feature, allFeatures, userLocation]);
+
+  const handleLocateMe = () => {
+    if (userLocation && mapInstanceRef.current) {
+        mapInstanceRef.current.setView([userLocation.lat, userLocation.lng], 12);
+    } else {
+        onRequestLocation();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
@@ -116,12 +167,21 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) 
           <h3 className="font-bold text-lg text-slate-800">
             {feature ? `Epicentro: ${feature.properties.place}` : 'Mappa Eventi'}
           </h3>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
+          <div className="flex gap-2">
+            <button 
+                onClick={handleLocateMe}
+                className="p-2 hover:bg-slate-200 rounded-full transition-colors text-blue-600 bg-blue-50"
+                title="La mia posizione"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+            </button>
+            <button 
+                onClick={onClose}
+                className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
         </div>
         <div className="flex-1 relative">
             <div ref={mapContainerRef} className="w-full h-full" />
@@ -148,6 +208,16 @@ const MapViewer: React.FC<MapViewerProps> = ({ feature, allFeatures, onClose }) 
                     </div>
                 </div>
             </div>
+
+            {/* Close Button Floating (Z-Index High) */}
+             <div className="absolute top-4 right-4 z-[1000]">
+                <button 
+                    onClick={onClose}
+                    className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-slate-100 transition-colors border border-slate-200"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+             </div>
         </div>
       </div>
     </div>

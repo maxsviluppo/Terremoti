@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { fetchEarthquakes } from './services/ingvService';
 import { EarthquakeFeature } from './types';
@@ -22,12 +21,21 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 // Synth Alarm Sound Generator
+let globalAudioCtx: AudioContext | null = null;
 const playAlarmSound = () => {
   try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContext) return;
       
-      const ctx = new AudioContext();
+      if (!globalAudioCtx) {
+          globalAudioCtx = new AudioContext();
+      }
+      
+      if (globalAudioCtx.state === 'suspended') {
+          globalAudioCtx.resume().catch(e => console.log("Audio resume failed (no gesture)", e));
+      }
+
+      const ctx = globalAudioCtx;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
@@ -37,13 +45,12 @@ const playAlarmSound = () => {
       osc.type = 'triangle';
       const now = ctx.currentTime;
       
-      // Siren effect (High - Low)
-      osc.frequency.setValueAtTime(880, now); // A5
-      osc.frequency.linearRampToValueAtTime(440, now + 0.3); // A4
-      osc.frequency.setValueAtTime(880, now + 0.3); // A5
-      osc.frequency.linearRampToValueAtTime(440, now + 0.6); // A4
+      osc.frequency.setValueAtTime(880, now); 
+      osc.frequency.linearRampToValueAtTime(440, now + 0.3); 
+      osc.frequency.setValueAtTime(880, now + 0.3); 
+      osc.frequency.linearRampToValueAtTime(440, now + 0.6); 
       
-      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.setValueAtTime(0.3, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
 
       osc.start(now);
@@ -63,6 +70,9 @@ function App() {
   const [selectedEarthquake, setSelectedEarthquake] = useState<EarthquakeFeature | null>(null);
   const [isMapOpen, setIsMapOpen] = useState<boolean>(false);
   
+  // Alert Banner State
+  const [activeAlert, setActiveAlert] = useState<EarthquakeFeature | null>(null);
+  
   // Geolocation states
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [searchRadius] = useState<number>(50); // Fixed 50km radius
@@ -72,16 +82,12 @@ function App() {
   // Notification States
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
   const [minAlertMag, setMinAlertMag] = useState<number>(2.0);
-  
-  // New Notification Settings
   const [notifMode, setNotifMode] = useState<NotificationMode>('global');
   const [notifCity, setNotifCity] = useState<string>('');
   const [notifRadius, setNotifRadius] = useState<number>(50);
   
-  // Use a ref to track the last fetch time to avoid state closure issues in interval
   const lastFetchTimeRef = useRef<number>(Date.now());
 
-  // Load settings from localStorage on mount
   useEffect(() => {
     const storedNotif = localStorage.getItem('notificationsEnabled');
     if (storedNotif) setNotificationsEnabled(JSON.parse(storedNotif));
@@ -99,7 +105,6 @@ function App() {
     if (storedRadius) setNotifRadius(parseInt(storedRadius));
   }, []);
 
-  // Save settings to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('notificationsEnabled', JSON.stringify(notificationsEnabled));
     localStorage.setItem('minAlertMag', minAlertMag.toString());
@@ -108,29 +113,26 @@ function App() {
     localStorage.setItem('notifRadius', notifRadius.toString());
   }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius]);
 
-  // Initial Fetch & Interval
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 60000); // Update every minute
+    const interval = setInterval(loadData, 60000); 
     return () => clearInterval(interval);
   }, [notificationsEnabled, minAlertMag, notifMode, notifCity, notifRadius, userLocation]);
 
   const checkNotifications = (features: EarthquakeFeature[]) => {
     if (!notificationsEnabled) return;
 
-    // Filter events that happened AFTER the last successful fetch
     const newEvents = features.filter(f => f.properties.time > lastFetchTimeRef.current);
 
     let triggered = false;
+    let latestEvent: EarthquakeFeature | null = null;
 
     newEvents.forEach(event => {
       const mag = event.properties.mag;
       const place = event.properties.place.toLowerCase();
       
-      // 1. Check Magnitude
       if (mag < minAlertMag) return;
 
-      // 2. Check Scope
       let shouldNotify = false;
 
       if (notifMode === 'global') {
@@ -140,32 +142,40 @@ function App() {
           const dist = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
           if (dist <= notifRadius) shouldNotify = true;
       } else if (notifMode === 'city' && notifCity.trim() !== '') {
-          // Allow multiple cities separated by comma
           const targets = notifCity.toLowerCase().split(',').map(s => s.trim()).filter(s => s);
           if (targets.some(target => place.includes(target))) {
               shouldNotify = true;
           }
       }
 
-      // Fire Notification
-      if (shouldNotify && Notification.permission === "granted") {
+      if (shouldNotify) {
         triggered = true;
-        new Notification(`Terremoto: ${event.properties.place}`, {
-          body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
-          icon: "/vite.svg" 
-        });
+        latestEvent = event;
+        
+        if (Notification.permission === "granted") {
+            try {
+                new Notification(`Terremoto: ${event.properties.place}`, {
+                    body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
+                    icon: "/vite.svg" 
+                });
+            } catch(e) { console.log(e); }
+        }
       }
     });
 
     if (triggered) {
         playAlarmSound();
+        if (latestEvent) {
+            setActiveAlert(latestEvent);
+            setTimeout(() => setActiveAlert(null), 8000);
+        }
     }
   };
 
   const loadData = async () => {
     try {
       const fetchTime = Date.now();
-      const result = await fetchEarthquakes(3); // Last 3 days
+      const result = await fetchEarthquakes(3); 
       
       if (data.length > 0) {
         checkNotifications(result.features);
@@ -189,7 +199,7 @@ function App() {
     triggerGeolocation();
   };
 
-  const triggerGeolocation = () => {
+  const triggerGeolocation = (retryLowAccuracy = false) => {
     setIsLocating(true);
     setGeoError(null);
 
@@ -199,20 +209,48 @@ function App() {
       return;
     }
 
+    const options = {
+        enableHighAccuracy: !retryLowAccuracy,
+        timeout: 15000,
+        maximumAge: 0
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation({
+        const newLoc = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
-        });
+        };
+        setUserLocation(newLoc);
         setIsLocating(false);
         setFilterText(''); 
       },
       (error) => {
         console.error("Error getting location:", error);
-        setGeoError("Impossibile rilevare la posizione.");
+        
+        // Retry with low accuracy if timeout occurs
+        if (!retryLowAccuracy && error.code === error.TIMEOUT) {
+            console.log("High accuracy timed out, retrying with low accuracy...");
+            triggerGeolocation(true);
+            return;
+        }
+
+        let errorMsg = "Errore rilevazione posizione.";
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg = "Permesso GPS negato.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMsg = "Posizione non disponibile.";
+            break;
+          case error.TIMEOUT:
+            errorMsg = "Timeout richiesta GPS.";
+            break;
+        }
+        setGeoError(errorMsg);
         setIsLocating(false);
-      }
+      },
+      options
     );
   }
 
@@ -227,309 +265,250 @@ function App() {
 
   const handleSwipeFilter = (place: string) => {
       if (filterText.toLowerCase() === place.toLowerCase()) {
-          setFilterText('');
+          setFilterText(''); 
+          setUserLocation(null);
       } else {
           setFilterText(place);
           setUserLocation(null);
       }
   };
 
-  const handleShare = async (data: EarthquakeFeature) => {
-    const shareData = {
-        title: `Terremoto: ${data.properties.place}`,
-        text: `🔴 Scossa sismica rilevata\n📍 ${data.properties.place}\n📉 Magnitudo: ${data.properties.mag.toFixed(1)}\n🌍 Profondità: ${data.geometry.coordinates[2]} km\n🕒 Orario: ${new Date(data.properties.time).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'})}\n\nMonitoraggio live su:`,
-        url: window.location.href
-    };
+  const handleShare = async (event: EarthquakeFeature) => {
+      const { mag, place, time } = event.properties;
+      const depth = event.geometry.coordinates[2];
+      const dateStr = new Date(time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+      
+      const shareData = {
+          title: `Terremoto`,
+          text: `Scossa: ${place}\nMag: ${mag.toFixed(1)} - Prof: ${depth}km\n${dateStr}`,
+          url: window.location.href
+      };
 
-    try {
-        // Verifica se il browser supporta la condivisione e se i dati sono validi
-        if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-            await navigator.share(shareData);
-        } else {
-            throw new Error("API Share non supportata o dati non validi");
-        }
-    } catch (err) {
-        // Fallback: Copia negli appunti
-        try {
-            const textToCopy = `${shareData.text} ${shareData.url}`;
-            await navigator.clipboard.writeText(textToCopy);
-            alert("Condivisione nativa non disponibile. I dettagli sono stati copiati negli appunti!");
-        } catch (clipboardErr) {
-            console.error("Fallita anche la copia negli appunti", clipboardErr);
-            alert("Impossibile condividere. Il browser potrebbe non supportare questa funzione.");
-        }
-    }
+      try {
+          if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+              await navigator.share(shareData);
+          } else {
+              throw new Error("Share API unavailable or validation failed");
+          }
+      } catch (err) {
+          // Fallback Clipboard
+          const fullText = `🔴 TERREMOTO RILEVATO\n\n📍 ${place}\n📉 Magnitudo: ${mag.toFixed(1)}\n⬇️ Profondità: ${depth} km\n🕒 Orario: ${dateStr}\n\nDati INGV`;
+          try {
+            await navigator.clipboard.writeText(fullText);
+            alert("Dati copiati negli appunti! Puoi incollarli dove vuoi.");
+          } catch (clipboardErr) {
+             prompt("Copia i dati manualmente:", fullText);
+          }
+      }
   };
 
   const filteredData = useMemo(() => {
-    let result = data;
+    let filtered = data;
 
-    // 1. Text Filter
-    if (filterText) {
-      const lowerFilter = filterText.toLowerCase();
-      result = result.filter(item => 
-        item.properties.place.toLowerCase().includes(lowerFilter)
+    if (userLocation) {
+        filtered = filtered.filter(f => {
+            const [lng, lat] = f.geometry.coordinates;
+            const dist = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+            return dist <= searchRadius;
+        });
+    } else if (filterText) {
+      filtered = filtered.filter(f => 
+        f.properties.place.toLowerCase().includes(filterText.toLowerCase())
       );
     }
-
-    // 2. Geolocation Filter (for list view)
-    if (userLocation) {
-      result = result.filter(item => {
-        const [lng, lat] = item.geometry.coordinates;
-        const dist = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
-        return dist <= searchRadius;
-      });
-    }
-
-    return [...result].sort((a, b) => b.properties.time - a.properties.time);
+    
+    return filtered;
   }, [data, filterText, userLocation, searchRadius]);
 
-  const groupedData = useMemo(() => {
-    const groups: Record<string, EarthquakeFeature[]> = {};
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const yesterdayStart = todayStart - 86400000;
+  const groupedEvents = useMemo(() => {
+    const today = new Date().toLocaleDateString('it-IT');
+    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('it-IT');
 
-    filteredData.forEach(item => {
-      const time = item.properties.time;
-      let key: string;
-      if (time >= todayStart) {
-        key = 'Oggi';
-      } else if (time >= yesterdayStart) {
-        key = 'Ieri';
-      } else {
-        const dateObj = new Date(time);
-        const dateStr = dateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-        key = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-      }
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(item);
+    const groups: { [key: string]: EarthquakeFeature[] } = {};
+
+    filteredData.forEach(event => {
+        const date = new Date(event.properties.time).toLocaleDateString('it-IT');
+        let groupName = date;
+        if (date === today) groupName = "OGGI";
+        else if (date === yesterday) groupName = "IERI";
+        
+        if (!groups[groupName]) groups[groupName] = [];
+        groups[groupName].push(event);
     });
-    return groups;
+
+    return Object.entries(groups).sort((a, b) => {
+        if (a[0] === "OGGI") return -1;
+        if (b[0] === "OGGI") return 1;
+        if (a[0] === "IERI") return -1;
+        if (b[0] === "IERI") return 1;
+        // Sort dates descending
+        return b[0].localeCompare(a[0]); // Simple string sort for DD/MM/YYYY works crudely or needs parsing
+    });
   }, [filteredData]);
 
-  const sortedGroupKeys = useMemo(() => {
-    return Object.keys(groupedData).sort((a, b) => {
-      if (a === 'Oggi') return -1;
-      if (b === 'Oggi') return 1;
-      if (a === 'Ieri') return -1;
-      if (b === 'Ieri') return 1;
-      const timeA = groupedData[a][0]?.properties.time || 0;
-      const timeB = groupedData[b][0]?.properties.time || 0;
-      return timeB - timeA;
-    });
-  }, [groupedData]);
-
-  const handleCardClick = (event: EarthquakeFeature) => {
-    setSelectedEarthquake(event);
+  const handleCardClick = (feature: EarthquakeFeature) => {
+    setSelectedEarthquake(feature);
     setIsMapOpen(true);
   };
 
-  let isGlobalFirstItem = true;
-
   return (
-    <div className="min-h-screen bg-green-50 text-slate-800 pb-10">
+    <div className="min-h-screen bg-emerald-50 text-slate-800 font-sans pb-10">
       
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm border-b border-green-100 transition-all">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-                <h1 className="text-2xl font-black tracking-tight text-emerald-900">TERREMOTI</h1>
-                <p className="text-xs text-emerald-600 font-medium">MONITORAGGIO LIVE ITALIA</p>
-            </div>
-            <div className="flex gap-2">
-                {/* Notification Button: Pale Rose/Pink */}
-                <button 
-                onClick={() => setShowSettings(true)}
-                className={`p-2.5 rounded-xl transition-all active:scale-95 border border-transparent ${notificationsEnabled ? 'bg-rose-500 text-white animate-pulse' : 'bg-rose-50 text-rose-500 border-rose-100 hover:bg-rose-100'}`}
-                title="Impostazioni Notifiche"
-                >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={notificationsEnabled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                </button>
-                
-                {/* Chart Button: Blue (Kept as primary) */}
-                <button 
-                onClick={() => setShowChart(true)}
-                className="bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
-                title="Statistiche"
-                >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                <span className="hidden md:inline text-xs font-bold">GRAFICO</span>
-                </button>
-                
-                {/* Info/Email Button: Pale Green */}
-                <button 
-                onClick={() => setShowInfo(true)}
-                className="bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 p-2.5 rounded-xl transition-all active:scale-95 flex items-center gap-1.5"
-                title="Informazioni"
-                >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                </button>
-            </div>
-          </div>
+      {/* IN-APP ALERT BANNER */}
+      <div className={`fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white shadow-xl transition-transform duration-500 ease-in-out px-4 py-3 flex items-center gap-3 ${activeAlert ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div className="bg-white/20 p-2 rounded-full animate-pulse shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div className="flex-1">
+            <p className="font-bold uppercase text-sm tracking-wider">Nuovo Terremoto Rilevato</p>
+            <p className="text-sm font-medium">{activeAlert?.properties.place} - M{activeAlert?.properties.mag.toFixed(1)}</p>
+        </div>
+        <button onClick={() => setActiveAlert(null)} className="p-1 hover:bg-white/20 rounded">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
 
+      <div className="max-w-md mx-auto px-4 py-6">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-black tracking-tight text-emerald-900">TERREMOTI</h1>
           <div className="flex gap-2">
-            <div className="relative flex-1">
-                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-4 w-4 text-emerald-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                    </svg>
-                 </div>
-                <input 
-                    type="text" 
-                    placeholder="Cerca città..." 
-                    className="w-full pl-10 pr-12 py-3 bg-white border border-green-100 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all placeholder:text-emerald-300/70"
-                    value={filterText}
-                    onChange={(e) => {
-                      setFilterText(e.target.value);
-                      setUserLocation(null); 
-                    }}
-                />
-                 {filterText && (
-                    <button 
-                        onClick={() => setFilterText('')}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-emerald-400 hover:text-emerald-600"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-                    </button>
-                 )}
-            </div>
             
-            {/* Geolocation Button: Pale Straw Yellow */}
             <button 
-                onClick={handleGeolocation}
-                disabled={isLocating}
-                className={`p-3 rounded-xl transition-all border ${userLocation ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white border-transparent' : 'bg-yellow-50 text-yellow-600 border-yellow-100 hover:bg-yellow-100'}`}
-                title="Usa la mia posizione"
+              onClick={() => setShowSettings(true)}
+              className="p-2 hover:bg-emerald-200 rounded-full transition-colors text-emerald-800"
+              title="Impostazioni"
             >
-                {isLocating ? (
-                   <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                ) : (
-                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={userLocation ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
-                )}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button 
+              onClick={() => setShowChart(true)} 
+              className="p-2 hover:bg-emerald-200 rounded-full transition-colors text-emerald-800"
+              title="Statistiche"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </button>
+             <button 
+              onClick={() => setShowInfo(true)} 
+              className="p-2 hover:bg-emerald-200 rounded-full transition-colors text-emerald-800"
+              title="Info"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
             </button>
           </div>
+        </div>
 
-          <div className="mt-3 flex gap-2 items-center overflow-x-auto no-scrollbar pb-1">
-             {userLocation ? (
-                 <div className="flex items-center gap-2 w-full animate-fade-in">
-                    <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white border border-emerald-600">
-                        Raggio: {searchRadius} km
-                    </span>
-                 </div>
-             ) : (
-                <>
-                    <button 
-                        onClick={() => toggleFilter('Napoli')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 active:scale-95 ${
-                            filterText === 'Napoli' 
-                            ? 'bg-gradient-to-br from-sky-500 to-cyan-600 text-white border-transparent scale-105 ring-2 ring-sky-300' 
-                            : 'bg-white text-sky-700 border-sky-100 hover:bg-sky-50'
-                        }`}
-                    >
-                         {filterText === 'Napoli' && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                        Napoli
-                    </button>
-                    <button 
-                        onClick={() => toggleFilter('Campi Flegrei')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5 active:scale-95 ${
-                            filterText === 'Campi Flegrei' 
-                            ? 'bg-gradient-to-br from-emerald-500 to-green-600 text-white border-transparent scale-105 ring-2 ring-emerald-300' 
-                            : 'bg-white text-emerald-700 border-emerald-100 hover:bg-green-50'
-                        }`}
-                    >
-                        {filterText === 'Campi Flegrei' && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                        Campi Flegrei
-                    </button>
-                </>
-             )}
+        {/* Filters & Location */}
+        <div className="flex gap-2 mb-6">
+          <div className="relative flex-1">
+            <input 
+              type="text" 
+              placeholder="Cerca località..." 
+              value={filterText}
+              onChange={(e) => {
+                setFilterText(e.target.value);
+                setUserLocation(null);
+              }}
+              className="w-full pl-10 pr-4 py-3 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700 bg-white"
+            />
+            <svg className="absolute left-3 top-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            {filterText && (
+                <button onClick={() => setFilterText('')} className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            )}
           </div>
           
-          {geoError && (
-              <div className="mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border border-red-100 flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-                  {geoError}
-              </div>
-          )}
+          <button 
+            onClick={handleGeolocation}
+            className={`p-3 rounded-xl shadow-sm transition-all ${userLocation ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+            title="Dintorni a me"
+          >
+            {isLocating ? (
+                 <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+            )}
+          </button>
+          
+          <button
+            onClick={() => {
+                setSelectedEarthquake(null);
+                setIsMapOpen(true);
+            }}
+             className="p-3 bg-white text-slate-500 hover:bg-slate-50 rounded-xl shadow-sm transition-colors"
+             title="Apri Mappa"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+          </button>
         </div>
-      </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6">
-        {loading ? (
-            <div className="space-y-4 animate-pulse">
-                {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-20 bg-white rounded-xl border border-green-50"></div>
-                ))}
-            </div>
-        ) : filteredData.length === 0 ? (
-            <div className="text-center py-20">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 mb-4 text-emerald-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-                </div>
-                <h3 className="text-lg font-bold text-emerald-900">
-                    {userLocation ? `Nessun evento entro ${searchRadius}km` : 'Nessun evento trovato'}
-                </h3>
-                <p className="text-emerald-600/70 text-sm">
-                    {userLocation ? 'Prova a cambiare posizione o attendi nuovi dati.' : 'Prova a cambiare i filtri di ricerca.'}
-                </p>
-                <button onClick={() => { setFilterText(''); setUserLocation(null); }} className="mt-4 text-emerald-600 font-bold text-sm hover:underline">Resetta filtri</button>
-            </div>
-        ) : (
-            <div className="space-y-8">
-                {sortedGroupKeys.map(groupKey => {
-                    const items = groupedData[groupKey];
-                    if (items.length === 0) return null;
-
-                    return (
-                        <div key={groupKey}>
-                            <h2 className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3 pl-1 sticky top-[170px] bg-green-50/90 backdrop-blur-sm py-2 z-10">
-                                {groupKey}
-                            </h2>
-                            <div className="space-y-3">
-                                {items.map((feature) => {
-                                    const isFirst = isGlobalFirstItem;
-                                    if (isFirst) isGlobalFirstItem = false;
-                                    
-                                    return (
-                                        <EarthquakeCard 
-                                            key={feature.id} 
-                                            data={feature} 
-                                            onClick={handleCardClick}
-                                            onFilter={handleSwipeFilter}
-                                            onShare={handleShare}
-                                            userLocation={userLocation}
-                                            activeFilter={filterText}
-                                            isFirst={isFirst}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })}
+        {/* Geo Error */}
+        {geoError && (
+             <div className="mb-4 bg-red-50 text-red-600 text-sm p-3 rounded-xl border border-red-100 flex justify-between items-center animate-fade-in">
+                <span>{geoError}</span>
+                <button onClick={() => setGeoError(null)}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
         )}
-      </main>
 
-      <button 
-        onClick={() => { setSelectedEarthquake(null); setIsMapOpen(true); }}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-900 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-emerald-950 transition-transform hover:scale-105 active:scale-95 z-40 border-2 border-emerald-400"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
-      </button>
+        {/* Content List */}
+        {loading ? (
+          <div className="space-y-4">
+             {[...Array(5)].map((_, i) => (
+                <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 animate-pulse flex justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                        <div className="h-5 bg-slate-200 rounded w-3/4"></div>
+                        <div className="flex gap-2">
+                            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                        </div>
+                    </div>
+                    <div className="w-16 h-16 bg-slate-200 rounded-2xl"></div>
+                </div>
+             ))}
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="text-center py-20 text-slate-400">
+             <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+             </div>
+             <p className="font-bold">Nessun terremoto trovato.</p>
+             <p className="text-sm">Prova a cambiare filtri.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {groupedEvents.map(([groupName, events]) => (
+                <div key={groupName} className="animate-slide-up">
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 sticky top-0 bg-emerald-50 py-2 z-10">{groupName}</h2>
+                    <div className="space-y-3">
+                        {events.map((event, index) => (
+                            <EarthquakeCard 
+                                key={event.id} 
+                                data={event} 
+                                onClick={handleCardClick}
+                                onFilter={toggleFilter}
+                                onShare={handleShare}
+                                userLocation={userLocation}
+                                activeFilter={filterText}
+                                isFirst={index === 0 && groupName === "OGGI"}
+                            />
+                        ))}
+                    </div>
+                </div>
+            ))}
+          </div>
+        )}
 
-      {showChart && (
-        <ChartSection 
-            data={filteredData} 
-            title={userLocation ? `Raggio ${searchRadius}km` : (filterText ? `Filtro: ${filterText}` : 'Tutti gli eventi recenti')}
-            onClose={() => setShowChart(false)} 
-        />
-      )}
+      </div>
 
+      {/* MODALS */}
+      {showChart && <ChartSection data={data} onClose={() => setShowChart(false)} />}
+      
       {showSettings && (
         <SettingsModal 
-            isOpen={showSettings}
-            onClose={() => setShowSettings(false)}
+            isOpen={showSettings} 
+            onClose={() => setShowSettings(false)} 
             notificationsEnabled={notificationsEnabled}
             setNotificationsEnabled={setNotificationsEnabled}
             minAlertMag={minAlertMag}
@@ -541,23 +520,20 @@ function App() {
             notifRadius={notifRadius}
             setNotifRadius={setNotifRadius}
             userLocation={userLocation}
-            onRequestLocation={triggerGeolocation}
+            onRequestLocation={handleGeolocation}
             isLocating={isLocating}
             geoError={geoError}
         />
       )}
 
-      {showInfo && (
-        <InfoModal 
-            isOpen={showInfo}
-            onClose={() => setShowInfo(false)}
-        />
-      )}
-
+      {showInfo && <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} />}
+      
       {isMapOpen && (
         <MapViewer 
-            feature={selectedEarthquake}
+            feature={selectedEarthquake} 
             allFeatures={filteredData}
+            userLocation={userLocation}
+            onRequestLocation={handleGeolocation}
             onClose={() => setIsMapOpen(false)}
         />
       )}

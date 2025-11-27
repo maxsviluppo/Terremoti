@@ -18,7 +18,7 @@
      <style>
        body {
          font-family: 'Montserrat', sans-serif;
-         background-color: #f0fdf4;
+         background-color: #ecfdf5; /* matches emerald-50 */
        }
        /* Hide scrollbar for Chrome, Safari and Opera */
         .no-scrollbar::-webkit-scrollbar {
@@ -28,6 +28,15 @@
         .no-scrollbar {
           -ms-overflow-style: none;  /* IE and Edge */
           scrollbar-width: none;  /* Firefox */
+        }
+        /* Marker Pop Animation */
+        @keyframes marker-pop {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-marker-pop {
+            animation: marker-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
      </style>
   <script type="importmap">

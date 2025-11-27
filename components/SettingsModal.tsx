@@ -24,13 +24,23 @@ interface SettingsModalProps {
   geoError?: string | null;
 }
 
-// Simple synth alarm for testing and alerting
+// Global context variable to unlock audio on mobile
+let unlockedAudioContext: AudioContext | null = null;
+
 const playTestAlarm = () => {
     try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContext) return;
         
-        const ctx = new AudioContext();
+        // Create or resume the global context to unlock it for the whole session
+        if (!unlockedAudioContext) {
+            unlockedAudioContext = new AudioContext();
+        }
+        if (unlockedAudioContext.state === 'suspended') {
+            unlockedAudioContext.resume();
+        }
+
+        const ctx = unlockedAudioContext;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
@@ -81,21 +91,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       return;
     }
 
+    // Initialize/Unlock audio immediately on user gesture
+    playTestAlarm();
+
     // Caso 2: Stiamo attivando
     if (!("Notification" in window)) {
       alert("Questo browser non supporta le notifiche desktop.");
+      setNotificationsEnabled(true); // Enable internal alert anyway
       return;
     }
 
     // Verifica lo stato corrente dei permessi
     if (Notification.permission === "granted") {
       setNotificationsEnabled(true);
-      playTestAlarm();
       return;
     }
 
     if (Notification.permission === "denied") {
-      alert("Le notifiche sono state bloccate per questo sito. Per attivarle:\n\n1. Clicca sull'icona del lucchetto o delle impostazioni nella barra degli indirizzi.\n2. Cerca 'Notifiche' e seleziona 'Consenti' o 'Chiedi'.\n3. Ricarica la pagina.");
+      alert("Le notifiche push sono state bloccate. Riceverai comunque l'avviso visivo rosso nell'app.");
+      setNotificationsEnabled(true); // Enable internal alert
       return;
     }
 
@@ -104,24 +118,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         setNotificationsEnabled(true);
-        playTestAlarm();
         // Test notification
         try {
           new Notification("Notifiche attivate", {
-            body: "Riceverai avvisi sonori per i nuovi terremoti.",
+            body: "Riceverai avvisi per i nuovi terremoti.",
             icon: "/vite.svg"
           });
         } catch (e) {
-          // Ignora errori su Android/iOS dove new Notification potrebbe richiedere service worker
           console.log("Notifica test non inviata (normale su mobile senza SW):", e);
         }
       } else {
         // L'utente ha cliccato "Blocca" o ha chiuso il prompt
-        setNotificationsEnabled(false);
+        // Attiviamo comunque per il banner in-app
+        setNotificationsEnabled(true);
+        alert("Notifiche push negate, ma riceverai l'avviso visivo nell'app.");
       }
     } catch (error) {
       console.error("Errore nella richiesta permessi:", error);
-      alert("Impossibile attivare le notifiche. Errore del browser.");
+      setNotificationsEnabled(true);
     }
   };
 
@@ -147,7 +161,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-slate-800">Abilita Notifiche</p>
-              <p className="text-xs text-slate-500">Ricevi avvisi e suoni anche in background</p>
+              <p className="text-xs text-slate-500">Ricevi avvisi e suoni (Push + Banner)</p>
             </div>
             <button 
               onClick={handleToggleNotifications}
