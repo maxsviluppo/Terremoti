@@ -181,10 +181,14 @@ function App() {
         
         if (Notification.permission === "granted") {
             try {
+                // Cast to any to allow vibrate property
                 new Notification(`Terremoto: ${event.properties.place}`, {
                     body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
-                    icon: "/vite.svg" 
-                });
+                    icon: "/vite.svg",
+                    tag: 'seismo-alert',
+                    renotify: true,
+                    vibrate: [200, 100, 200]
+                } as any);
             } catch(e) { console.log(e); }
         }
       }
@@ -277,13 +281,13 @@ function App() {
         let errorMsg = "Errore rilevazione posizione.";
         switch(error.code) {
           case error.PERMISSION_DENIED:
-            errorMsg = "Permesso GPS negato.";
+            errorMsg = "Permesso GPS negato. Controlla Impostazioni > Privacy.";
             break;
           case error.POSITION_UNAVAILABLE:
             errorMsg = "Posizione non disponibile.";
             break;
           case error.TIMEOUT:
-            errorMsg = "Timeout richiesta GPS.";
+            errorMsg = "Timeout richiesta GPS. Riprova.";
             break;
         }
         setGeoError(errorMsg);
@@ -561,7 +565,7 @@ function App() {
       </div>
 
       {/* MODALS */}
-      {showChart && <ChartSection data={data} onClose={() => setShowChart(false)} />}
+      {showChart && <ChartSection data={filteredData} onClose={() => setShowChart(false)} />}
       
       {showSettings && (
         <SettingsModal 
