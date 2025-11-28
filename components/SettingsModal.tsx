@@ -88,7 +88,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         try {
           new Notification("Notifiche attivate", {
             body: "Riceverai avvisi per i nuovi terremoti.",
-            icon: "/vite.svg"
+            icon: "vite.svg" // Fixed relative path
           });
         } catch (e) {
           console.log("Notifica test non inviata (normale su mobile senza SW):", e);
