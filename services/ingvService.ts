@@ -17,14 +17,14 @@ export const fetchEarthquakes = async (days: number = 3): Promise<EarthquakeColl
     }
     const rawData = await response.json();
 
-    // Fix: INGV returns time as ISO String, but app expects Timestamp Number.
-    // We convert it here so the rest of the app can do math on it.
+    // Fix: INGV returns time as ISO String (e.g. 2023-10-01T10:00:00) without 'Z'.
+    // Browsers often interpret this as Local Time, causing a 1-hour lag in Italy.
+    // We append 'Z' to force UTC interpretation, ensuring correct timezone conversion later.
     const features = rawData.features.map((f: any): EarthquakeFeature => ({
       ...f,
       properties: {
         ...f.properties,
-        // Convert ISO string to milliseconds timestamp
-        time: new Date(f.properties.time).getTime()
+        time: new Date(f.properties.time.includes('Z') ? f.properties.time : f.properties.time + 'Z').getTime()
       }
     }));
 
