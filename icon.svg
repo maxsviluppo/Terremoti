@@ -1,33 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="emeraldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#065f46;stop-opacity:1" />
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#064e3b;stop-opacity:1" /> <!-- Emerald 900 -->
+      <stop offset="100%" style="stop-color:#022c22;stop-opacity:1" /> <!-- Emerald 950 -->
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.25"/>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="innerShadow">
+        <feOffset dx="0" dy="0"/>
+        <feGaussianBlur stdDeviation="10" result="offset-blur"/>
+        <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
+        <feFlood flood-color="black" flood-opacity="0.5" result="color"/>
+        <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+        <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
     </filter>
   </defs>
-  
-  <!-- Background Shape -->
-  <rect x="0" y="0" width="512" height="512" rx="120" fill="url(#emeraldGradient)"/>
-  
-  <!-- Seismic Grid Lines -->
-  <path d="M60 256 H452" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
-  <path d="M256 60 V452" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
-  <circle cx="256" cy="256" r="100" stroke="rgba(255,255,255,0.1)" stroke-width="4" fill="none"/>
-  <circle cx="256" cy="256" r="180" stroke="rgba(255,255,255,0.05)" stroke-width="4" fill="none"/>
 
-  <!-- Seismic Wave -->
-  <path d="M80 256 L130 256 L160 256 L190 340 L230 140 L270 380 L310 200 L340 256 L432 256" 
-        stroke="white" 
-        stroke-width="24" 
+  <!-- Base Squircle (iOS Style) -->
+  <rect x="0" y="0" width="512" height="512" rx="128" fill="url(#bgGradient)"/>
+  
+  <!-- Radar Rings (Subtle background detail) -->
+  <circle cx="256" cy="256" r="100" stroke="rgba(52, 211, 153, 0.1)" stroke-width="2" fill="none"/>
+  <circle cx="256" cy="256" r="180" stroke="rgba(52, 211, 153, 0.05)" stroke-width="2" fill="none"/>
+  <circle cx="256" cy="256" r="60" stroke="rgba(52, 211, 153, 0.15)" stroke-width="2" fill="none"/>
+
+  <!-- Stylized Seismograph Line (Neon) -->
+  <path d="M70 256 L130 256 L150 256 L175 320 L220 160 L260 360 L300 210 L330 256 L442 256" 
+        stroke="#34d399" 
+        stroke-width="20" 
         stroke-linecap="round" 
         stroke-linejoin="round" 
         fill="none"
-        filter="url(#shadow)"
+        filter="url(#glow)"
   />
+  
+  <!-- Center Epicenter Dot (Highlight) -->
+  <circle cx="260" cy="360" r="14" fill="#fbbf24" filter="url(#glow)"/>
 
-  <!-- Epicenter Dot -->
-  <circle cx="270" cy="380" r="16" fill="#fbbf24" stroke="rgba(0,0,0,0.2)" stroke-width="2"/>
+  <!-- Glossy Overlay (Glass effect) -->
+  <path d="M0 0 H512 V256 Q256 320 0 256 Z" fill="url(#whiteGradient)" opacity="0.05"/>
+  <linearGradient id="whiteGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0" />
+  </linearGradient>
 </svg>
