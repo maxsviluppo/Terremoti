@@ -184,7 +184,7 @@ function App() {
                 // Cast to any to allow vibrate property
                 new Notification(`Terremoto: ${event.properties.place}`, {
                     body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
-                    icon: "./icon.svg", // Updated to new icon path
+                    icon: "vite.svg", // Fixed relative path
                     tag: 'seismo-alert',
                     renotify: true,
                     vibrate: [200, 100, 200]
