@@ -184,7 +184,7 @@ function App() {
                 // Cast to any to allow vibrate property
                 new Notification(`Terremoto: ${event.properties.place}`, {
                     body: `Magnitudo ${mag.toFixed(1)} - Profondità ${event.geometry.coordinates[2]}km`,
-                    icon: "vite.svg", // Fixed relative path
+                    icon: "./icon.svg", // Updated to new icon path
                     tag: 'seismo-alert',
                     renotify: true,
                     vibrate: [200, 100, 200]
@@ -395,10 +395,10 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-emerald-50 text-slate-800 font-sans pb-10">
+    <div className="min-h-screen text-slate-800 font-sans pb-10">
       
-      {/* IN-APP ALERT BANNER */}
-      <div className={`fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white shadow-xl transition-transform duration-500 ease-in-out px-4 py-3 flex items-center gap-3 ${activeAlert ? 'translate-y-0' : '-translate-y-full'}`}>
+      {/* IN-APP ALERT BANNER - Safe Area Aware */}
+      <div className={`fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white shadow-xl transition-transform duration-500 ease-in-out px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] flex items-center gap-3 ${activeAlert ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="bg-white/20 p-2 rounded-full animate-pulse shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </div>
@@ -416,17 +416,17 @@ function App() {
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-emerald-900 leading-none">TERREMOTI</h1>
-            <p className="text-xs font-semibold text-emerald-600/80 mt-1 tracking-wide">Terremoti in tempo reale</p>
+            <h1 className="text-2xl font-black tracking-tight text-emerald-900 leading-none drop-shadow-sm">TERREMOTI</h1>
+            <p className="text-xs font-semibold text-emerald-700/80 mt-1 tracking-wide">Monitoraggio Italia</p>
           </div>
           <div className="flex gap-2">
             
             <button 
               onClick={() => setShowSettings(true)}
-              className={`p-2 rounded-full transition-all duration-300 ${
+              className={`p-2 rounded-full transition-all duration-300 backdrop-blur-md ${
                   notificationsEnabled 
-                  ? 'bg-yellow-400 text-yellow-900 shadow-lg shadow-yellow-200 ring-2 ring-yellow-100' 
-                  : 'hover:bg-emerald-200 text-emerald-800'
+                  ? 'bg-yellow-400/90 text-yellow-900 shadow-lg shadow-yellow-200 ring-2 ring-yellow-100' 
+                  : 'bg-white/40 hover:bg-white/60 text-emerald-800 border border-emerald-100/50'
               }`}
               title="Impostazioni Notifiche"
             >
@@ -438,14 +438,14 @@ function App() {
             </button>
             <button 
               onClick={() => setShowChart(true)} 
-              className="p-2 hover:bg-emerald-200 rounded-full transition-colors text-emerald-800"
+              className="p-2 bg-white/40 hover:bg-white/60 rounded-full transition-colors text-emerald-800 border border-emerald-100/50 backdrop-blur-md"
               title="Statistiche"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
             </button>
              <button 
               onClick={() => setShowInfo(true)} 
-              className="p-2 hover:bg-emerald-200 rounded-full transition-colors text-emerald-800"
+              className="p-2 bg-white/40 hover:bg-white/60 rounded-full transition-colors text-emerald-800 border border-emerald-100/50 backdrop-blur-md"
               title="Info"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
@@ -455,7 +455,7 @@ function App() {
 
         {/* Filters & Location */}
         <div className="flex gap-2 mb-6">
-          <div className="relative flex-1">
+          <div className="relative flex-1 group">
             <input 
               type="text" 
               placeholder="Cerca località..." 
@@ -464,9 +464,9 @@ function App() {
                 setFilterText(e.target.value);
                 setUserLocation(null);
               }}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700 bg-white"
+              className="w-full pl-10 pr-4 py-3 rounded-xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700 bg-white/80 backdrop-blur-sm transition-all group-hover:bg-white"
             />
-            <svg className="absolute left-3 top-3.5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <svg className="absolute left-3 top-3.5 text-emerald-600/60" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             {filterText && (
                 <button onClick={() => setFilterText('')} className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -476,7 +476,7 @@ function App() {
           
           <button 
             onClick={handleGeolocation}
-            className={`p-3 rounded-xl shadow-sm transition-all ${userLocation ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+            className={`p-3 rounded-xl shadow-sm transition-all backdrop-blur-sm border border-white/20 ${userLocation ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-white/80 text-emerald-700 hover:bg-white'}`}
             title="Dintorni a me"
           >
             {isLocating ? (
@@ -491,7 +491,7 @@ function App() {
                 setSelectedEarthquake(null);
                 setIsMapOpen(true);
             }}
-             className="p-3 bg-white text-slate-500 hover:bg-slate-50 rounded-xl shadow-sm transition-colors"
+             className="p-3 bg-white/80 text-emerald-700 hover:bg-white rounded-xl shadow-sm transition-colors backdrop-blur-sm border border-white/20"
              title="Apri Mappa"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
@@ -500,7 +500,7 @@ function App() {
 
         {/* Geo Error */}
         {geoError && (
-             <div className="mb-4 bg-red-50 text-red-600 text-sm p-3 rounded-xl border border-red-100 flex justify-between items-center animate-fade-in">
+             <div className="mb-4 bg-red-50 text-red-600 text-sm p-3 rounded-xl border border-red-100 flex justify-between items-center animate-fade-in shadow-sm">
                 <span>{geoError}</span>
                 <button onClick={() => setGeoError(null)}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
@@ -510,37 +510,37 @@ function App() {
         {loading ? (
           <div className="space-y-4">
              {[...Array(5)].map((_, i) => (
-                <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 animate-pulse flex justify-between gap-4">
+                <div key={i} className="bg-white/80 p-4 rounded-xl shadow-sm border border-white/50 animate-pulse flex justify-between gap-4">
                     <div className="flex-1 space-y-3">
-                        <div className="h-5 bg-slate-200 rounded w-3/4"></div>
+                        <div className="h-5 bg-emerald-100/50 rounded w-3/4"></div>
                         <div className="flex gap-2">
-                            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
-                            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                            <div className="h-4 bg-emerald-100/50 rounded w-1/4"></div>
+                            <div className="h-4 bg-emerald-100/50 rounded w-1/4"></div>
                         </div>
                     </div>
-                    <div className="w-16 h-16 bg-slate-200 rounded-2xl"></div>
+                    <div className="w-16 h-16 bg-emerald-100/50 rounded-2xl"></div>
                 </div>
              ))}
           </div>
         ) : filteredData.length === 0 ? (
           <div className="text-center py-20 text-slate-400">
-             <div className="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
+             <div className="bg-white/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm backdrop-blur-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-200"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>
              </div>
-             <p className="font-bold">Nessun terremoto trovato.</p>
-             <p className="text-sm">Prova a cambiare filtri.</p>
+             <p className="font-bold text-emerald-800/60">Nessun terremoto trovato.</p>
+             <p className="text-sm text-emerald-700/40">Prova a cambiare filtri.</p>
           </div>
         ) : (
           <div className="space-y-6">
             {groupedEvents.map(([groupName, events]) => (
                 <div key={groupName} className="animate-slide-up relative pt-4">
                     {/* Visual Separator */}
-                    <div className="flex items-center justify-center gap-3 mb-4 sticky top-0 bg-emerald-50 py-2 z-10">
-                        <div className="h-px bg-emerald-200 flex-1"></div>
-                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full shadow-sm uppercase tracking-widest border border-emerald-200">
+                    <div className="flex items-center justify-center gap-3 mb-4 sticky top-0 py-2 z-10">
+                        <div className="h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent flex-1"></div>
+                        <span className="text-[10px] font-black text-emerald-800 bg-white/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm uppercase tracking-widest border border-emerald-100/50">
                             {groupName}
                         </span>
-                        <div className="h-px bg-emerald-200 flex-1"></div>
+                        <div className="h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent flex-1"></div>
                     </div>
                     
                     <div className="space-y-3">
